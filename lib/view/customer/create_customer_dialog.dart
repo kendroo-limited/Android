@@ -17,10 +17,9 @@ class CreateCustomerPage extends StatefulWidget {
 class _CreateCustomerPageState extends State<CreateCustomerPage> {
   final _formKey = GlobalKey<FormState>();
 
-  // Scroll controller
+
   final ScrollController _scrollCtrl = ScrollController();
 
-  // Basic
   final _nameCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
@@ -29,22 +28,21 @@ class _CreateCustomerPageState extends State<CreateCustomerPage> {
   final _cityCtrl = TextEditingController();
   final _companyNameCtrl = TextEditingController();
 
-  // Address
+
   final _streetCtrl = TextEditingController();
   final _street2Ctrl = TextEditingController();
   final _stateCtrl = TextEditingController();
   final _zipCtrl = TextEditingController();
 
-  // Extra
+
   final _vatCtrl = TextEditingController();
   final _websiteCtrl = TextEditingController();
 
   bool _isCompany = true;
 
-  // 👇 NEW: image picker state
   final ImagePicker _picker = ImagePicker();
   XFile? _pickedImageFile;
-  String? _imageBase64; // this will go to createCustomer(...imageBase64: _imageBase64)
+  String? _imageBase64;
 
   @override
   void dispose() {
@@ -65,7 +63,7 @@ class _CreateCustomerPageState extends State<CreateCustomerPage> {
     super.dispose();
   }
 
-  // 👇 NEW: pick image from gallery (you can also add camera)
+
   Future<void> _pickImage() async {
     final XFile? picked = await _picker.pickImage(
       source: ImageSource.gallery,
@@ -99,7 +97,7 @@ class _CreateCustomerPageState extends State<CreateCustomerPage> {
           : _companyNameCtrl.text.trim(),
       city: _cityCtrl.text.trim().isEmpty ? null : _cityCtrl.text.trim(),
 
-      // 👇 pass the base64 image (can be null if user didn’t pick)
+
       imageBase64: _imageBase64,
 
       street: _streetCtrl.text.trim().isEmpty ? null : _streetCtrl.text.trim(),
@@ -159,7 +157,6 @@ class _CreateCustomerPageState extends State<CreateCustomerPage> {
             key: _formKey,
             child: Column(
               children: [
-                // 👇 NEW: image avatar + upload button
                 Row(
                   children: [
                     CircleAvatar(
@@ -191,7 +188,6 @@ class _CreateCustomerPageState extends State<CreateCustomerPage> {
 
                 const SizedBox(height: 16),
 
-                // ==== BASIC INFO ====
                 TextFormField(
                   controller: _nameCtrl,
                   decoration: const InputDecoration(labelText: 'Name'),
@@ -234,7 +230,6 @@ class _CreateCustomerPageState extends State<CreateCustomerPage> {
 
                 const SizedBox(height: 20),
 
-                // ==== ADDRESS ====
                 const Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
@@ -282,7 +277,6 @@ class _CreateCustomerPageState extends State<CreateCustomerPage> {
 
                 const SizedBox(height: 20),
 
-                // ==== EXTRA ====
                 const Align(
                   alignment: Alignment.centerLeft,
                   child: Text(

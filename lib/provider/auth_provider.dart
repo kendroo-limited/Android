@@ -15,7 +15,7 @@ class AuthProvider extends ChangeNotifier {
 bool autologgeedin = false;
   String? sessionCookie;
   OdooUser? user;
-
+String? database;
   Future<void> tryAutoLogin(BuildContext context) async {
     _isLoading = true;
     notifyListeners();
@@ -76,7 +76,7 @@ autologgeedin=true;
   Future<void> login(String db, String username, String password) async {
     _isLoading = true;
     notifyListeners();
-
+database=db;
     try {
       final url = Uri.parse('https://demo.kendroo.com/web/session/authenticate');
       final res = await http.post(

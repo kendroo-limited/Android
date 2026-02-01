@@ -1,8 +1,6 @@
 import 'dart:ui';
-
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-
 import '../../model/product_model.dart';
 
 class ProductDetailsPage extends StatefulWidget {
@@ -42,18 +40,17 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
         builder: (context, constraints) {
           final w = constraints.maxWidth;
 
-          // ===== Global responsive metrics =====
-          final nameSize       = (w * 0.055).clamp(16.0, 24.0); // product name
+          final nameSize       = (w * 0.055).clamp(16.0, 24.0);
           final nameMaxLines   = w < 360 ? 2 : 3;
           final titleTopGap    = (w * 0.03).clamp(8.0, 18.0);
           final titleImageGap  = (w * 0.06).clamp(12.0, 24.0);
           final sectionTopGap  = (w * 0.05).clamp(12.0, 22.0);
 
-          // Image width/height relative to width
+
           final imageWidth  = (w * 0.75).clamp(200.0, 340.0);
           final imageHeight = (imageWidth * 0.6).clamp(120.0, 240.0);
 
-          // Page padding
+
           final horizontalPadding = (w * 0.05).clamp(12.0, 24.0);
           final topPadding        = (w * 0.03).clamp(8.0, 16.0);
           final bottomPadding     = (w * 0.06).clamp(16.0, 32.0);
@@ -68,7 +65,6 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // ===== Name + Thumbnail (responsive) =====
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -107,7 +103,6 @@ class _ProductDetailsPageState extends State<ProductDetailsPage> {
 
                 SizedBox(height: sectionTopGap),
 
-                // ===== General Information (card-like details) =====
                 _SectionCard(
                   title: 'General Information',
                   typeLabel: _typeLabel,
@@ -199,7 +194,6 @@ class _SectionCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header
           Text(
             title,
             style: TextStyle(
@@ -235,7 +229,6 @@ class _SectionCard extends StatelessWidget {
     );
   }
 
-  // Insert light spacing between rows (not full dividers, to keep it airy).
   List<Widget> _withDividers(List<Widget> items, double gap) {
     final out = <Widget>[];
     for (var i = 0; i < items.length; i++) {
@@ -265,7 +258,6 @@ class _InfoRow extends StatelessWidget {
       builder: (context, constraints) {
         final w = constraints.maxWidth;
 
-        // Responsive metrics inside row
         final iconSize      = (w * 0.045).clamp(16.0, 20.0);
         final iconTopPad    = multiline ? (w * 0.004).clamp(1.0, 4.0) : 0.0;
         final gapIconLabel  = (w * 0.025).clamp(6.0, 12.0);
@@ -298,7 +290,6 @@ class _InfoRow extends StatelessWidget {
               ),
               SizedBox(width: gapIconLabel),
 
-              // Label
               SizedBox(
                 width: labelWidth,
                 child: Text(
@@ -309,7 +300,6 @@ class _InfoRow extends StatelessWidget {
                 ),
               ),
 
-              // Value
               Expanded(
                 child: Text(
                   value,

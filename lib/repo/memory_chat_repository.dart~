@@ -1,3 +1,5 @@
+//
+//
 // import 'dart:convert';
 // import 'package:flutter/material.dart';
 // import 'package:http/http.dart' as http;
@@ -578,7 +580,7 @@ import '../model/user_model.dart';
 import 'chat_repository.dart';
 
 class MemoryChatRepository implements IChatRepository {
-
+  // ─────────────────────────── ctor / config ───────────────────────────
   final String baseUrl;
   final String sessionCookie;
   final Duration httpTimeout;
@@ -645,12 +647,15 @@ class MemoryChatRepository implements IChatRepository {
     return parsed;
   }
 
+
+  /// Create or reuse a direct-message channel with the given partner.
+  /// `partnerId` = res.partner id, NOT user id.
   Future<Conversation> getOrCreateDirectChannel({
     required int partnerId,
     required String partnerName,
   }) async {
     try {
-
+      // 1) Try to find an existing DM chat with this partner
       final searchParsed = await _callKw(
         model: 'mail.channel',
         method: 'search_read',
@@ -679,13 +684,13 @@ class MemoryChatRepository implements IChatRepository {
       Map<String, dynamic> ch;
 
       if (searchList.isNotEmpty && searchList.first is Map) {
-
+        // Found existing channel
         ch = searchList.first as Map<String, dynamic>;
         print(
           'ℹ️ Reusing existing DM channel id=${ch['id']} for partner $partnerId',
         );
       } else {
-
+        // 2) No existing → create new chat channel
         final createParsed = await _callKw(
           model: 'mail.channel',
           method: 'create',
@@ -694,7 +699,7 @@ class MemoryChatRepository implements IChatRepository {
               "channel_type": "chat",
               "name": partnerName,
               "channel_partner_ids": [
-                [6, 0, [partnerId]]
+                [6, 0, [partnerId]] // replace members with this partner (+ current user automatically)
               ],
             }
           ],
@@ -707,7 +712,7 @@ class MemoryChatRepository implements IChatRepository {
 
         print('ℹ️ Created new DM channel id=$newId for partner $partnerId');
 
-
+        // 3) Read the channel back
         final readParsed = await _callKw(
           model: 'mail.channel',
           method: 'search_read',
@@ -737,7 +742,7 @@ class MemoryChatRepository implements IChatRepository {
         ch = readList.first as Map<String, dynamic>;
       }
 
-
+      // ---- Build Conversation object from 'ch' ----
       final int id = int.tryParse("${ch['id']}") ?? 0;
       if (id == 0) throw Exception('Invalid channel id in response');
 
@@ -778,7 +783,7 @@ class MemoryChatRepository implements IChatRepository {
       print('❌ getOrCreateDirectChannel error: $e');
       print(st);
 
-
+      // Hard fallback – local-only conversation so UI still works
       final peer = OdooUser(
         uid: partnerId,
         name: partnerName,
@@ -805,7 +810,7 @@ class MemoryChatRepository implements IChatRepository {
     }
   }
 
-
+  // ─────────────────────────── demo users ──────────────────────────────
   final OdooUser me = OdooUser(
     uid: 999,
     name: "John",
@@ -843,7 +848,7 @@ class MemoryChatRepository implements IChatRepository {
           "method": "search_read",
           "args": [
             [
-              ["user_ids", "!=", false]
+              ["user_ids", "!=", false]   // ✔ only partners with user accounts
             ],
           ],
           "kwargs": {
@@ -962,6 +967,7 @@ class MemoryChatRepository implements IChatRepository {
 
   Future<List<Conversation>> _fetchInboxFromOdoo() async {
     try {
+      // Standard Odoo JSON-RPC search_read on mail.channel
       final payload = {
         "jsonrpc": "2.0",
         "method": "call",
@@ -970,7 +976,7 @@ class MemoryChatRepository implements IChatRepository {
           "method": "search_read",
           "args": [
             [
-              ["channel_type", "=", "chat"],
+              ["channel_type", "=", "chat"],  // ← only direct messages
             ]
           ],
           "kwargs": {
@@ -991,7 +997,7 @@ class MemoryChatRepository implements IChatRepository {
 
       final res = await http
           .post(
-        _jsonRpcUri,
+        _jsonRpcUri, // https://erp.kendroo.io/web/dataset/call_kw
         headers: _headers,
         body: jsonEncode(payload),
       )
@@ -1003,7 +1009,7 @@ class MemoryChatRepository implements IChatRepository {
 
       final parsed = jsonDecode(res.body) as Map<String, dynamic>;
 
-
+      // If Odoo returns error
       if (parsed.containsKey('error')) {
         final err = parsed['error'] as Map<String, dynamic>;
         final msg = (err['message'] ?? '').toString();
@@ -1016,10 +1022,11 @@ class MemoryChatRepository implements IChatRepository {
         print(debug);
         print('── end debug ──');
 
+        // As a backup, you *can* still fall back to init_messaging or demo
         return _demoInbox();
       }
 
-
+      // search_read → result is a List[dict]
       final result = parsed['result'] as List<dynamic>? ?? [];
       print('ℹ️ mail.channel(chat) count: ${result.length}');
 
@@ -1051,7 +1058,7 @@ class MemoryChatRepository implements IChatRepository {
         ) ?? 0;
 
         final peer = OdooUser(
-          uid: id,
+          uid: id,                // for now: use channel id; later you can map to partner
           name: name,
           username: '',
           db: '',
@@ -1101,6 +1108,7 @@ class MemoryChatRepository implements IChatRepository {
 
 
 
+  // ─────────────────────────── messages ────────────────────────────────
   @override
   Future<List<Message>> fetchMessages(
       String conversationId,
@@ -1168,7 +1176,7 @@ class MemoryChatRepository implements IChatRepository {
     }
   }
 
-
+  /// Fallback: load messages directly from Odoo (mail.channel.channel_fetch_message)
   Future<List<Message>> _fetchMessagesFromOdoo(
       String conversationId,
       OdooUser peer,
@@ -1273,7 +1281,7 @@ class MemoryChatRepository implements IChatRepository {
     return int.tryParse(digits.group(1)!) ?? 0;
   }
 
-
+  // ─────────────────────────── upload ──────────────────────────────────
   @override
   Future<List<UploadedAttachment>> uploadAttachments({
     required String conversationId,
@@ -1352,6 +1360,7 @@ class MemoryChatRepository implements IChatRepository {
     }
   }
 
+  // ─────────────────────────── send message ────────────────────────────
   @override
   Future<Message> sendMessage({
     required String conversationId,
@@ -1424,6 +1433,7 @@ class MemoryChatRepository implements IChatRepository {
     }
   }
 
+  /// Fallback: use Odoo JSON-RPC (mail.channel.message_post + write for seen)
   Future<Message> _sendMessageViaOdoo({
     required String conversationId,
     required String text,
@@ -1442,7 +1452,7 @@ class MemoryChatRepository implements IChatRepository {
     }
 
     try {
-
+      // 1) send message via message_post
       final payload = {
         "jsonrpc": "2.0",
         "method": "call",
@@ -1473,7 +1483,7 @@ class MemoryChatRepository implements IChatRepository {
       final msgId = (parsed['result'] as int?) ?? 0;
 
       if (msgId > 0) {
-
+        // 2) mark seen using write (as you requested)
         await _markChannelSeen(channelId, msgId);
 
         return Message(
@@ -1514,12 +1524,14 @@ class MemoryChatRepository implements IChatRepository {
     }
   }
 
+  // ─────────────────────────── helpers ─────────────────────────────────
   void _printPreview(String body) {
     final len = body.length > 400 ? 400 : body.length;
     final preview = body.substring(0, len);
     print('🔹 Body preview (${len} chars):\n$preview');
   }
 
+  // Parse message from your custom /api/chat/*
   Conversation _parseConversation(Map raw) {
     final id = '${raw['id'] ?? ''}';
     final unread = (raw['unread'] is num) ? (raw['unread'] as num).toInt() : 0;
@@ -1586,6 +1598,7 @@ class MemoryChatRepository implements IChatRepository {
     );
   }
 
+  /// Parse mail.message dict from Odoo JSON-RPC
   Message _parseOdooMailMessage(
       Map<String, dynamic> raw,
       OdooUser fallbackPeer,
@@ -1593,6 +1606,7 @@ class MemoryChatRepository implements IChatRepository {
       ) {
     final id = '${raw['id'] ?? ''}';
 
+    // author_id: [id, name]
     OdooUser sender = fallbackPeer;
     if (raw['author_id'] is List && (raw['author_id'] as List).length >= 2) {
       final lst = raw['author_id'] as List;
@@ -1694,6 +1708,7 @@ class MemoryChatRepository implements IChatRepository {
         .trim();
   }
 
+  // ─────────────────────────── fallbacks / demo ────────────────────────
   List<Conversation> _demoInbox() {
     return [
       Conversation(

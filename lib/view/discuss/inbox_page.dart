@@ -198,10 +198,9 @@ class _InboxPageState extends State<InboxPage>
   @override
   void initState() {
     super.initState();
-    // Only one tab (Activity)
+
     _tab = TabController(length: 1, vsync: this);
 
-    // Load inbox once the first frame is built
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<ChatProvider>().loadInbox();
     });
@@ -218,7 +217,6 @@ class _InboxPageState extends State<InboxPage>
     final provider = context.watch<ChatProvider>();
     final w = MediaQuery.of(context).size.width;
 
-    // Responsive spacing
     final gapSmall = w < 340 ? 4.0 : 6.0;
     final gapMedium = w < 400 ? 8.0 : 12.0;
 
@@ -277,7 +275,6 @@ class _InboxPageState extends State<InboxPage>
   }
 }
 
-// ─────────────────────────── Inbox list ───────────────────────────
 
 class _MessagesList extends StatelessWidget {
   final List<Conversation> conversations;
@@ -285,7 +282,7 @@ class _MessagesList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // While provider is still loading, inbox will be empty
+
     if (conversations.isEmpty) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -336,7 +333,6 @@ class _MessagesList extends StatelessWidget {
                 ),
             ],
           ),
-          // Existing conversation → just open it, don't recreate channel
           onTap: () async {
             final chat = context.read<ChatProvider>();
 
@@ -358,7 +354,6 @@ class _MessagesList extends StatelessWidget {
   }
 }
 
-// ─────────────────────────── New chat: select user ───────────────────────────
 
 class _SelectPartnerPage extends StatefulWidget {
   const _SelectPartnerPage({super.key});
@@ -383,8 +378,6 @@ class _SelectPartnerPageState extends State<_SelectPartnerPage> {
       final chat = context.read<ChatProvider>();
       final IChatRepository repo = chat.repo;
 
-      // You must implement this in your repository:
-      // Future<List<OdooUser>> fetchChatPartners()
       final partners = await repo.fetchChatPartners();
 
       setState(() {
@@ -444,8 +437,6 @@ class _SelectPartnerPageState extends State<_SelectPartnerPage> {
     );
   }
 }
-
-// ─────────────────────────── Shared helpers ───────────────────────────
 
 String _initials(String name) {
   final parts = name.trim().split(' ');

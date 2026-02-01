@@ -237,7 +237,6 @@ class LeaveDetailsPage extends StatelessWidget {
 
   const LeaveDetailsPage({super.key, required this.leave});
 
-  // --- DATE FORMATTER ---
   String _formatDate(String isoLike) {
     if (isoLike.isEmpty) return 'N/A';
     try {
@@ -249,7 +248,6 @@ class LeaveDetailsPage extends StatelessWidget {
     }
   }
 
-  // --- STATUS COLORS ---
   Color _statusColor(String state) {
     switch (state.toLowerCase()) {
       case 'draft':
@@ -271,7 +269,6 @@ class LeaveDetailsPage extends StatelessWidget {
 
   Color _statusBg(String s) => _statusColor(s).withOpacity(0.12);
 
-  // --- RESPONSIVE BADGE ---
   Widget _badge(BuildContext context, String label, String state) {
     final w = MediaQuery.of(context).size.width;
     final padH = (w * 0.025).clamp(6.0, 14.0);
@@ -298,7 +295,6 @@ class LeaveDetailsPage extends StatelessWidget {
     );
   }
 
-  // --- RESPONSIVE INFO ROW ---
   Widget _infoRow(BuildContext context, IconData icon, String label, String value) {
     final w = MediaQuery.of(context).size.width;
 
@@ -346,7 +342,6 @@ class LeaveDetailsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final w = MediaQuery.of(context).size.width;
 
-    // Responsive metrics
     final avatarRadius = (w * 0.12).clamp(28.0, 42.0);
     final avatarFont   = (w * 0.045).clamp(14.0, 18.0);
     final headerPad    = (w * 0.04).clamp(14.0, 22.0);
@@ -367,7 +362,6 @@ class LeaveDetailsPage extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
 
-            // HEADER (Responsive)
             Container(
               padding: EdgeInsets.all(headerPad),
               decoration: BoxDecoration(
@@ -432,7 +426,6 @@ class LeaveDetailsPage extends StatelessWidget {
               ),
             ),
 
-            // SECTION TITLE
             Padding(
               padding: EdgeInsets.fromLTRB(headerPad, headerPad, headerPad, headerPad / 2),
               child: Text(
@@ -449,7 +442,6 @@ class LeaveDetailsPage extends StatelessWidget {
               child: const Divider(),
             ),
 
-            // DETAIL LIST
             Padding(
               padding: EdgeInsets.fromLTRB(headerPad, 8, headerPad, headerPad * 1.3),
               child: Column(
@@ -471,7 +463,6 @@ class LeaveDetailsPage extends StatelessWidget {
     );
   }
 
-  // --- HELPERS ---
   static String _title(String s) {
     return s.isEmpty
         ? ''

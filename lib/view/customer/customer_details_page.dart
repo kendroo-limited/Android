@@ -1037,7 +1037,7 @@ class _CustomerDetailsViewState extends State<CustomerDetailsView> {
   bool _isEditing = false;
   final _formKey = GlobalKey<FormState>();
 
-  // Controllers
+
   final _nameCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
@@ -1155,7 +1155,7 @@ class _CustomerDetailsViewState extends State<CustomerDetailsView> {
     }
   }
 
-  // Company badge / switch
+
   Widget _buildCompanyWidget() {
     if (!_isEditing) {
       return Container(
@@ -1178,7 +1178,6 @@ class _CustomerDetailsViewState extends State<CustomerDetailsView> {
       );
     }
 
-    // Edit mode
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -1199,8 +1198,6 @@ class _CustomerDetailsViewState extends State<CustomerDetailsView> {
   Widget build(BuildContext context) {
     final c = _customer;
     final isUpdating = context.watch<CustomerProvider>().isUpdating;
-
-    // 🔹 Build avatar from base64 if available
     ImageProvider? avatarImage;
     if (c.image_base64.isNotEmpty) {
       try {
@@ -1243,7 +1240,7 @@ class _CustomerDetailsViewState extends State<CustomerDetailsView> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             mainAxisSize: MainAxisSize.min,
             children: [
-              // ── Header ────────────────────────────────────────────────
+
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -1259,7 +1256,7 @@ class _CustomerDetailsViewState extends State<CustomerDetailsView> {
                     final actionsMaxWidth =
                     isNarrow ? double.infinity : 180.0;
 
-                    // Responsive avatar size
+
                     final avatarRadius = w < 340 ? 28.0 : 35.0;
                     final iconSize = avatarRadius * 0.6;
 
@@ -1328,8 +1325,6 @@ class _CustomerDetailsViewState extends State<CustomerDetailsView> {
                         ),
                       );
                     }
-
-                    // Narrow layout: actions below
                     if (isNarrow) {
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1432,7 +1427,6 @@ class _CustomerDetailsViewState extends State<CustomerDetailsView> {
                       );
                     }
 
-                    // Wide layout: actions on the right
                     return Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -1532,7 +1526,6 @@ class _CustomerDetailsViewState extends State<CustomerDetailsView> {
                 ),
               ),
 
-              // ── Contact Details ────────────────────────────────────────────
               Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
@@ -1610,8 +1603,6 @@ class _CustomerDetailsViewState extends State<CustomerDetailsView> {
                   ],
                 ),
               ),
-
-              // ── Account/Meta Details ──────────────────────────────────────
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
                 child: Column(
@@ -1658,7 +1649,6 @@ class _CustomerDetailsViewState extends State<CustomerDetailsView> {
     );
   }
 
-  // Read-only info row
   Widget _infoRow(IconData icon, String label, String value) {
     final shown = value.isNotEmpty ? value : 'N/A';
     return Padding(
@@ -1696,7 +1686,6 @@ class _CustomerDetailsViewState extends State<CustomerDetailsView> {
     );
   }
 
-  // Editable text field row
   Widget _editableField({
     required IconData icon,
     required String label,

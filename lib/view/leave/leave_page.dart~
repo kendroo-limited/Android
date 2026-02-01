@@ -183,8 +183,10 @@ class _LeavePageState extends State<LeavePage> {
   Widget build(BuildContext context) {
     final provider = context.watch<LeaveProvider>();
 
+    // Screen width for all responsive values
     final w = MediaQuery.of(context).size.width;
 
+    // Global responsive values
     final tilePad = (w * 0.03).clamp(10.0, 18.0);
     final titleFont = (w * 0.042).clamp(14.0, 18.0);
     final subtitleFont = (w * 0.038).clamp(13.0, 16.0);
@@ -232,6 +234,8 @@ class _LeavePageState extends State<LeavePage> {
             ),
             child: ListTile(
               contentPadding: EdgeInsets.all(tilePad),
+
+              // Avatar
               leading: CircleAvatar(
                 radius: avatarRadius,
                 backgroundColor: Colors.blue.shade100,
@@ -242,6 +246,7 @@ class _LeavePageState extends State<LeavePage> {
                 ),
               ),
 
+              // Title (Employee name)
               title: Text(
                 l.employeeName,
                 maxLines: 1,
@@ -252,6 +257,7 @@ class _LeavePageState extends State<LeavePage> {
                 ),
               ),
 
+              // Status chip
               trailing: Container(
                 padding: EdgeInsets.symmetric(
                   horizontal: chipPadH,
@@ -275,6 +281,7 @@ class _LeavePageState extends State<LeavePage> {
                 ),
               ),
 
+              // Subtitle section (date, days, type)
               subtitle: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -325,6 +332,7 @@ class _LeavePageState extends State<LeavePage> {
     );
   }
 
+  // ---- HELPERS ----
   static String _fmtDate(String raw) {
     try {
       final d = DateTime.parse(raw);

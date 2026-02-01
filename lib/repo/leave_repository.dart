@@ -35,7 +35,6 @@ class LeaveRepository {
         }
       }
 
-      // fallback
       return _demoLeaves();
     } catch (e) {
       print('⚠️ Error fetching leaves: $e');
@@ -43,7 +42,6 @@ class LeaveRepository {
     }
   }
 
-  // Modified to include new fields in the Leave constructor
   List<Leave> _demoLeaves() {
     return [
       Leave(
@@ -52,10 +50,10 @@ class LeaveRepository {
         requestDateFrom: '2025-11-05',
         requestDateTo: '2025-11-07',
         numberOfDays: 3,
-        state: 'validate', // Added new field
-        employeeId: 101, // Added new field
-        employeeName: 'Demo User', // Added new field
-        company: 'Demo Corp Ltd', // Added new field
+        state: 'validate',
+        employeeId: 101,
+        employeeName: 'Demo User',
+        company: 'Demo Corp Ltd',
       ),
       Leave(
         id: 2,
@@ -63,10 +61,10 @@ class LeaveRepository {
         requestDateFrom: '2025-10-20',
         requestDateTo: '2025-10-22',
         numberOfDays: 3,
-        state: 'confirm', // Added new field
-        employeeId: 101, // Added new field
-        employeeName: 'Demo User', // Added new field
-        company: 'Demo Corp Ltd', // Added new field
+        state: 'confirm',
+        employeeId: 101,
+        employeeName: 'Demo User',
+        company: 'Demo Corp Ltd',
       ),
       Leave(
         id: 3,
@@ -74,10 +72,10 @@ class LeaveRepository {
         requestDateFrom: '2025-09-10',
         requestDateTo: '2025-09-11',
         numberOfDays: 2,
-        state: 'draft', // Added new field
-        employeeId: 101, // Added new field
-        employeeName: 'Demo User', // Added new field
-        company: 'Demo Corp Ltd', // Added new field
+        state: 'draft',
+        employeeId: 101,
+        employeeName: 'Demo User',
+        company: 'Demo Corp Ltd',
       ),
     ];
   }

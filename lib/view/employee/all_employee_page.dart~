@@ -331,17 +331,17 @@ class _AllEmployeesPageState extends State<AllEmployeesPage> {
         builder: (context, c) {
           final w = c.maxWidth;
 
-
+          // Simple breakpoints (you can extend later)
           final isPhone = w < 600;
           final isTablet = w >= 600 && w < 1024;
           final crossAxisCount =
-          isPhone ? 1 : (isTablet ? 2 : 3);
+          isPhone ? 1 : (isTablet ? 2 : 3); // reserved if you add grid later
 
-
+          // Scale spacing by width
           final hPad = w < 360 ? 8.0 : 12.0;
           final vGap = w < 360 ? 6.0 : 10.0;
 
-
+          // For now: phone-style list
           return ListView.separated(
             padding: EdgeInsets.all(hPad),
             separatorBuilder: (_, __) => SizedBox(height: vGap),
@@ -362,7 +362,7 @@ class _AllEmployeesPageState extends State<AllEmployeesPage> {
     final session =
         Provider.of<AuthProvider>(context, listen: false).sessionCookie ?? '';
 
-
+    // Responsive sizes
     final avatarRadius =
     parentW < 340 ? 20.0 : (parentW < 420 ? 24.0 : 25.0);
     final titleSize =
@@ -370,10 +370,10 @@ class _AllEmployeesPageState extends State<AllEmployeesPage> {
     final subSize = parentW < 340 ? 12.0 : 13.0;
     final dense = parentW < 360;
 
-
+    // 🔹 Build avatar ImageProvider
     ImageProvider? avatarImage;
 
-
+    // 1) Try base64 if present (for future / custom API)
     if (emp.imageUrl.isNotEmpty) {
       try {
         final bytes = base64Decode(emp.imageUrl);
@@ -383,7 +383,7 @@ class _AllEmployeesPageState extends State<AllEmployeesPage> {
       }
     }
 
-
+    // 2) Fallback to URL image from Odoo if base64 is empty or failed
     if (avatarImage == null && emp.imageUrl.isNotEmpty) {
       try {
         avatarImage = NetworkImage(

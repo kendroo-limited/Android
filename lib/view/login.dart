@@ -18,7 +18,7 @@ class _OdooLoginPageState extends State<OdooLoginPage> {
 
   void initState() {
     super.initState();
-    //
+
     // WidgetsBinding.instance.addPostFrameCallback((_) {
     //   context.read<AuthProvider>().tryAutoLogin(context);
     // });
@@ -33,10 +33,9 @@ class _OdooLoginPageState extends State<OdooLoginPage> {
     //final auth = Provider.of<AuthProvider>(context, listen: false);
     final auth = context.watch<AuthProvider>();
     if (auth.user != null) {
-      return const DashboardScreen(); // ✅ no Navigator push, no flash
+      return const DashboardScreen();
     }
 
-    // ✅ While checking session / logging in
     if (auth.isLoading) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),

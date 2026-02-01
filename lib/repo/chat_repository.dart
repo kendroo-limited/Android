@@ -35,10 +35,9 @@ abstract class IChatRepository {
     required List<PickedAttachment> picked,
   });
 
-  // NEW:
+
   Future<List<OdooUser>> fetchChatPartners();
 
-  // NEW:
   Future<Conversation> getOrCreateDirectChannel({
     required int partnerId,
     required String partnerName,
@@ -50,10 +49,10 @@ abstract class IChatRepository {
 class UploadedAttachment {
   final String id;
   final String name;
-  final String url;        // if backend returns it
-  final String mimeType;   // optional
-  final int size;          // optional
-  final bool isImage;      // optional hint for UI
+  final String url;
+  final String mimeType;
+  final int size;
+  final bool isImage;
   UploadedAttachment({
     required this.id,
     required this.name,

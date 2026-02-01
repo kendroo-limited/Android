@@ -1,7 +1,5 @@
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
 import '../model/employee_model.dart';
 import '../provider/auth_provider.dart';
 import '../provider/employee_provider.dart';
@@ -14,7 +12,6 @@ class EmployeeProfilePage extends StatefulWidget {
 }
 
 class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
-  // Removed TabController initialization and disposal
 
   @override
   void initState() {
@@ -25,7 +22,6 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
 
   @override
   void dispose() {
-    // No TabController to dispose
     super.dispose();
   }
 
@@ -211,7 +207,6 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
     return SingleChildScrollView(
       child: Column(
         children: [
-          // --- Profile Header Section ---
           Stack(
             alignment: Alignment.topCenter,
             children: [
@@ -219,7 +214,6 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
                 padding: const EdgeInsets.only(top: 20),
                 child: Column(
                   children: [
-                    // Profile Picture
                     Stack(
                       alignment: Alignment.center,
                       children: [
@@ -264,7 +258,6 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
                             ),
                           ),
                         ),
-                        // Edit Icon on the profile picture
                         Positioned(
                           right: 0,
                           bottom: 0,
@@ -285,7 +278,6 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Name + edit icon
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -312,7 +304,6 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
                       ],
                     ),
 
-                    // Job title
                     Text(
                       emp.jobTitle,
                       maxLines: 1,
@@ -326,7 +317,6 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
 
                     const SizedBox(height: 16),
 
-                    // Contact info row
                     Padding(
                       padding:
                       const EdgeInsets.symmetric(horizontal: 20.0),
@@ -354,7 +344,6 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
 
           const Divider(height: 1, thickness: 1),
 
-          // Your own function for the details section
           _buildPersonalTab(emp),
         ],
       ),
@@ -367,12 +356,11 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
 
 
   Widget _contactInfoTile(IconData icon, String text) {
-    // Find the non-email part of the contact for display (e.g., Kumaran@exsoftwares -> Kumaran)
+
     String displayString = text.contains('@')
-        ? text.substring(0, text.indexOf('@')) // Display part before @ for email
+        ? text.substring(0, text.indexOf('@'))
         : text;
 
-    // Shorten if still too long (e.g., if phone is long)
     if (displayString.length > 15) {
       displayString = '${displayString.substring(0, 12)}...';
     }
@@ -389,7 +377,7 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
           ],
         ),
         Text(
-          text.contains('@') ? text.substring(text.indexOf('@')) : '', // Display '@exsoftwares' only for email
+          text.contains('@') ? text.substring(text.indexOf('@')) : '',
           style: const TextStyle(fontSize: 10, color: Colors.grey),
         ),
       ],
@@ -430,10 +418,10 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
   Widget _buildPersonalTab(Employee emp) {
     final w = MediaQuery.of(context).size.width;
 
-    // Responsive text sizes
+
     final titleSize = (w * 0.048).clamp(16.0, 20.0);
 
-    // Responsive padding
+
     final horizontalPad = (w * 0.04).clamp(12.0, 22.0);
 
     return Padding(
@@ -490,14 +478,11 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
   Widget _personalInfoRow(String label, String value) {
     final w = MediaQuery.of(context).size.width;
 
-    // Label width becomes flexible based on screen size
     final labelWidth = (w * 0.32).clamp(90.0, 150.0);
 
-    // Font sizes
     final labelFont = (w * 0.036).clamp(12.0, 15.0);
     final valueFont = (w * 0.038).clamp(13.0, 16.0);
 
-    // Vertical spacing
     final rowSpacing = (w * 0.018).clamp(4.0, 10.0);
 
     return Padding(
@@ -505,7 +490,7 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Responsive label column
+
           SizedBox(
             width: labelWidth,
             child: Text(
@@ -519,7 +504,7 @@ class _EmployeeProfilePageState extends State<EmployeeProfilePage> {
             ),
           ),
 
-          // Value
+
           Expanded(
             child: Text(
               value,

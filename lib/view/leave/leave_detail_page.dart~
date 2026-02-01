@@ -230,7 +230,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-import '../model/leave_model.dart';
+import '../../model/leave_model.dart';
 
 class LeaveDetailsPage extends StatelessWidget {
   final Leave leave;

@@ -836,7 +836,6 @@ class _ChatPageState extends State<ChatPage> {
   void initState() {
     super.initState();
 
-    // Make sure messages for this conversation are fetched
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final conv = widget.conv;
       if (conv != null) {
@@ -851,7 +850,6 @@ class _ChatPageState extends State<ChatPage> {
     _scroll.dispose();
     super.dispose();
   }
-// ─────────────────────────── Shared Helpers ───────────────────────────
 
   String _initials(String name) {
     final parts = name.trim().split(' ');
@@ -1062,7 +1060,6 @@ class _MessageContent extends StatelessWidget {
       builder: (context, constraints) {
         final w = constraints.maxWidth;
 
-        // Base font sizes tuned for mobile
         final baseFont = w < 320 ? 13.0 : (w < 380 ? 14.0 : 15.0);
         final timeFont = w < 320 ? 11.0 : 12.0;
 
@@ -1081,17 +1078,13 @@ class _MessageContent extends StatelessWidget {
           );
         }
 
-        // --- Attachment block ---
-
-        // Compute card width based on available width (for phones)
-        // Example: ~2 cards per row on normal phones, 3 on wide.
         final cardsPerRow = w < 260
             ? 1
-            : (w < 400 ? 2 : 3); // adjust if you want fewer / more columns
+            : (w < 400 ? 2 : 3);
         final horizontalSpacing = 8.0;
         final totalSpacing = horizontalSpacing * (cardsPerRow - 1);
         final cardWidth =
-            (w - totalSpacing).clamp(120.0, 200.0) / cardsPerRow; // min/max guard
+            (w - totalSpacing).clamp(120.0, 200.0) / cardsPerRow;
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1204,7 +1197,6 @@ class _ComposerState extends State<_Composer> {
     for (final f in res.files) {
       String? finalPath = f.path;
 
-      // SAF / URI-only → copy stream to temp file
       if ((finalPath == null || finalPath.isEmpty) && f.readStream != null) {
         final safeName = f.name.isNotEmpty ? f.name : 'attachment';
         final target = File('${tmpDir.path}/$safeName');
@@ -1269,7 +1261,6 @@ class _ComposerState extends State<_Composer> {
     context.read<ChatProvider>().setTyping(false);
 
     try {
-      // Provider now supports attachments and will call repo.uploadAttachments → repo.sendMessage
       await context.read<ChatProvider>().send(
         widget.convId,
         text,

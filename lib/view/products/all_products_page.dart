@@ -105,16 +105,14 @@ class _AllProductsPageState extends State<AllProductsPage> {
     );
   }
 
-
   Widget _buildProductTile(Product product) {
     final w = MediaQuery.of(context).size.width;
 
-    // ===== Responsive Sizes =====
-    final iconSize   = (w * 0.055).clamp(18.0, 26.0);  // leading icon
-    final arrowSize  = (w * 0.04).clamp(14.0, 18.0);   // trailing arrow
-    final titleSize  = (w * 0.045).clamp(14.0, 18.0);  // product name
-    final subSize    = (w * 0.035).clamp(12.0, 14.0);  // subtitle
-    final verticalPad = (w * 0.015).clamp(6.0, 12.0);  // tile spacing
+    final iconSize   = (w * 0.055).clamp(18.0, 26.0);
+    final arrowSize  = (w * 0.04).clamp(14.0, 18.0);
+    final titleSize  = (w * 0.045).clamp(14.0, 18.0);
+    final subSize    = (w * 0.035).clamp(12.0, 14.0);
+    final verticalPad = (w * 0.015).clamp(6.0, 12.0);
 
     return Padding(
       padding: EdgeInsets.symmetric(vertical: verticalPad * 0.3),
@@ -124,14 +122,12 @@ class _AllProductsPageState extends State<AllProductsPage> {
           vertical: verticalPad,
         ),
 
-        // Leading icon (responsive)
         leading: Icon(
           Icons.shopping_bag_outlined,
           color: Colors.blue,
           size: iconSize,
         ),
 
-        // Title responsive
         title: Text(
           product.name,
           maxLines: 1,
@@ -142,7 +138,6 @@ class _AllProductsPageState extends State<AllProductsPage> {
           ),
         ),
 
-        // Subtitle responsive
         subtitle: Text(
           'Price: ${product.listPrice} | UoM: ${product.uomName}\nType: ${product.type}',
           style: TextStyle(
@@ -155,7 +150,6 @@ class _AllProductsPageState extends State<AllProductsPage> {
 
         isThreeLine: true,
 
-        // Trailing arrow (responsive)
         trailing: Icon(
           Icons.arrow_forward_ios,
           size: arrowSize,

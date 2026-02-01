@@ -23,7 +23,6 @@ class _ProjectsTasksPageState extends State<ProjectsTasksPage>
     super.initState();
     _tab = TabController(length: 2, vsync: this);
 
-    // LOAD BOTH LISTS AUTOMATICALLY
     Future.microtask(() {
       context.read<ProjectProvider>().loadProjects();
       context.read<TaskProvider>().loadTasks();

@@ -372,7 +372,6 @@ class _AttendancePageState extends State<AttendancePage> {
   }
 }
 
-/* ---------- DATE HEADER (chevrons ±1 day, full date text) ---------- */
 
 class _DateHeader extends StatelessWidget {
   const _DateHeader({
@@ -410,7 +409,6 @@ class _DateHeader extends StatelessWidget {
   }
 }
 
-/* ---------- ATTENDANCE LIST ---------- */
 
 class _AttendanceList extends StatelessWidget {
   const _AttendanceList({required this.attendance});
@@ -524,7 +522,7 @@ class _AttendanceList extends StatelessWidget {
   }
 }
 
-/* ---------- STATUS PILL ---------- */
+
 class _StatusPill extends StatelessWidget {
   const _StatusPill({required this.text});
   final String text;
@@ -556,7 +554,7 @@ class _StatusPill extends StatelessWidget {
   }
 }
 
-/* ---------- ERROR & EMPTY VIEWS ---------- */
+
 class _ErrorView extends StatelessWidget {
   const _ErrorView({required this.msg});
   final String msg;

@@ -71,7 +71,6 @@ class ProductRepository {
       print('→ ${useGet ? "GET" : "POST"} $uri');
       print('🔹 Response status: ${res.statusCode}');
       _printPreview(res.body);
-      // If non-200 OR body looks like HTML OR Content-Type not JSON → fallback
       final ct = res.headers['content-type'] ?? '';
       final bodyTrim = res.body.trimLeft();
       final looksLikeHtml = bodyTrim.startsWith('<!DOCTYPE') || bodyTrim.startsWith('<html');
@@ -81,7 +80,6 @@ class ProductRepository {
         return _demoProducts();
       }
 
-      // Parse JSON safely
       Map<String, dynamic> parsed;
       try {
         parsed = jsonDecode(res.body) as Map<String, dynamic>;
@@ -104,7 +102,6 @@ class ProductRepository {
     }
   }
 
-  // --- helpers ---
 
   void _printPreview(String body) {
     final len = body.length > 400 ? 400 : body.length;

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:ui';
 import 'package:field_force_2/provider/chat_provider.dart';
 import 'package:field_force_2/provider/journey_provider.dart';
@@ -73,11 +74,20 @@ Future<void> main() async {
             create: (_) => EmployeeProvider(null),
             update: (_, auth, __) => EmployeeProvider(auth),
           ),
-          ChangeNotifierProvider(
-            create: (_) => JourneyProvider(
-              JourneyRepository(baseUrl: 'https://demo.kendroo.io',),
+          ChangeNotifierProxyProvider<AuthProvider, JourneyProvider>(
+            create: (context) => JourneyProvider(
+              repository: FieldForceRepository(baseUrl:'https://demo.kendroo.com', sessionCookie: ''),
+              authToken: "", // Initial empty token
+            ),
+            update: (context, auth, previous) => JourneyProvider(
+              repository: FieldForceRepository(
+                baseUrl: 'https://demo.kendroo.com',
+                sessionCookie: auth.sessionCookie ?? '',
+              ),
+              authToken: auth.sessionCookie ?? "",
             ),
           ),
+
 
           ChangeNotifierProxyProvider<AuthProvider, AllEmployeeProvider>(
             create: (_) => AllEmployeeProvider(

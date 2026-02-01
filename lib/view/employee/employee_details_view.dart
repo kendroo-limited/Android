@@ -37,12 +37,12 @@ class EmployeeDetailsView extends StatelessWidget {
       },
     );
 
-    // Check first so we can show a friendly message instead of throwing.
+
     if (await canLaunchUrl(uri)) {
       final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
       if (!ok) throw Exception('Could not launch email client');
     } else {
-      // Optional: last-resort web compose (Gmail) if there’s a browser
+
       final web = Uri.https('mail.google.com', '/mail/', {
         'view': 'cm',
         'to': to,
@@ -95,7 +95,6 @@ class EmployeeDetailsView extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
 
-          // ───────── HEADER SECTION ─────────
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -139,7 +138,6 @@ class EmployeeDetailsView extends StatelessWidget {
             ),
           ),
 
-          // ───────── DETAILS SECTION ─────────
           Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -201,7 +199,6 @@ class EmployeeDetailsView extends StatelessWidget {
           Icon(icon, size: 20, color: Colors.grey.shade600),
           const SizedBox(width: 12),
 
-          // Label takes a smaller, flexible share
           Flexible(
             flex: 4, // tweak as needed
             child: Text(
@@ -214,9 +211,8 @@ class EmployeeDetailsView extends StatelessWidget {
 
           const SizedBox(width: 20),
 
-          // Value takes the remaining space
           Flexible(
-            flex: 7, // tweak as needed
+            flex: 7,
             child: Text(
               value.isNotEmpty ? value : 'N/A',
               maxLines: 2, // allow 2 lines for longer values
@@ -232,10 +228,6 @@ class EmployeeDetailsView extends StatelessWidget {
       ),
     );
   }
-
-
-
-
 }
 
 class _ActionsBlock extends StatelessWidget {
@@ -271,7 +263,7 @@ class _ActionsBlock extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style:  TextStyle(
-                  fontSize: scaler.scale(14),   // 👈 scale only the number
+                  fontSize: scaler.scale(14),
                 ),
               ),
             ),
@@ -338,7 +330,7 @@ class _ActionsBlock extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  fontSize: scaler.scale(14),   // 👈 scale only the number
+                  fontSize: scaler.scale(14),
                 ),
               ),
             ),

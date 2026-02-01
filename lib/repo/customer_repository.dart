@@ -186,7 +186,7 @@ class CustomerRepository {
     };
   }
 
-  // -------------------- FETCH ALL CUSTOMERS --------------------
+
   Future<List<Customer>> fetchAllCustomers() async {
     final uri = Uri.parse('$baseUrl/api/all/customers');
     final headers = _buildHeaders();
@@ -208,7 +208,7 @@ class CustomerRepository {
       final looksHtml =
           body.startsWith('<!DOCTYPE') || body.startsWith('<html');
       _printPreview(res.body);
-      // Non-200, non-JSON, or HTML page ⇒ demo
+
       if (res.statusCode != 200 ||
           !ct.contains('application/json') ||
           looksHtml) {
@@ -218,7 +218,7 @@ class CustomerRepository {
         return CustomerResponse.fromJson(demo).customers;
       }
 
-      // Try decode
+
       Map<String, dynamic> decoded;
       try {
         decoded = jsonDecode(res.body) as Map<String, dynamic>;
@@ -245,7 +245,7 @@ class CustomerRepository {
     }
   }
 
-  // -------------------- CREATE CUSTOMER --------------------
+
   Future<Customer> createCustomer({
     required String name,
     required bool isCompany,
@@ -428,7 +428,7 @@ class CustomerRepository {
     return updated;
   }
 
-  // -------------------- Helpers --------------------
+
   void _printPreview(String body) {
     final len = body.length > 400 ? 400 : body.length;
     print('🔹 Body preview (${len} chars):\n${body.substring(0, len)}');

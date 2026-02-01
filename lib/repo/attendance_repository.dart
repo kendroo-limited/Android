@@ -183,14 +183,13 @@ class AttendanceRepository {
       final body = res.body.trimLeft();
       final looksHtml = body.startsWith('<!DOCTYPE') || body.startsWith('<html');
 
-      // If API fails or returns HTML instead of JSON, use demo data
       if (res.statusCode != 200 || !contentType.contains('application/json') || looksHtml) {
         return Attendance.fromJson(_demoAttendanceJsonFor(date));
       }
 
       final decoded = jsonDecode(res.body) as Map<String, dynamic>;
 
-      // If server returns empty or malformed, fallback to demo
+
       final result = decoded['result'] as Map<String, dynamic>? ?? {};
       if ((result['employee_name'] ?? '').toString().isEmpty) {
         return Attendance.fromJson(_demoAttendanceJsonFor(date));
@@ -212,7 +211,7 @@ class AttendanceRepository {
 
   Map<String, dynamic> _demoAttendanceJsonFor(DateTime date) {
     final d = _fmtDate(date);
-    final w = date.weekday; // 1=Mon ... 7=Sun
+    final w = date.weekday;
     final empId = (1000 + w);
     final empName = [
       'Mitchell Admin', 'Christine Spalding', 'Vijesh TK', 'Aida A.',

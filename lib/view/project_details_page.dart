@@ -101,10 +101,6 @@ class ProjectDetailsPage extends StatelessWidget {
             ),
 
             const SizedBox(height: 16),
-
-            // 🔹 Extra space for more fields later (description, dates, etc.)
-            // if you have project.description, project.startDate, etc.,
-            // you can show them here.
           ],
         ),
       ),

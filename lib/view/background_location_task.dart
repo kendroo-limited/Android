@@ -14,8 +14,7 @@ class LocationTaskHandler extends TaskHandler {
 
   @override
   Future<void> onStart(DateTime timestamp, SendPort? sendPort) async {
-    // Called when service starts
-    // You can initialize resources here if needed
+
   }
 
   @override
@@ -26,29 +25,28 @@ class LocationTaskHandler extends TaskHandler {
 
       final point = ll.LatLng(locData.latitude!, locData.longitude!);
 
-      // Send location to main isolate
       sendPort?.send({
         'lat': point.latitude,
         'lng': point.longitude,
         'time': timestamp.toIso8601String(),
       });
     } catch (e) {
-      // ignore errors
+
     }
   }
 
   @override
   void onDestroy(DateTime timestamp, SendPort? sendPort) {
-    // Clean up resources if needed
+
   }
 
   @override
   void onButtonPressed(String id) {
-    // Optional: handle notification button press
+
   }
 
   @override
   void onNotificationPressed() {
-    // Optional: handle notification tap
+
   }
 }

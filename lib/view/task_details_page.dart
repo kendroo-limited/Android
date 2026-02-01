@@ -34,8 +34,7 @@ class TaskDetailsPage extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Task title
-                    Text(
+                  Text(
                       task.name,
                       style: const TextStyle(
                         fontSize: 20,
@@ -44,7 +43,6 @@ class TaskDetailsPage extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
 
-                    // Status + Project
                     Row(
                       children: [
                         const Icon(Icons.flag, size: 18),
@@ -64,7 +62,6 @@ class TaskDetailsPage extends StatelessWidget {
 
                     const SizedBox(height: 8),
 
-                    // Deadline
                     Row(
                       children: [
                         const Icon(Icons.event, size: 18),
@@ -80,7 +77,6 @@ class TaskDetailsPage extends StatelessWidget {
 
                     const SizedBox(height: 8),
 
-                    // Priority
                     Row(
                       children: [
                         const Icon(Icons.priority_high, size: 18),
@@ -101,8 +97,7 @@ class TaskDetailsPage extends StatelessWidget {
 
             const SizedBox(height: 16),
 
-            // 🔹 Optional: if you have description field in Task model, show it here
-            // Example:
+
             // if (task.description != null && task.description!.isNotEmpty) ...[
             //   const Text(
             //     "Description",

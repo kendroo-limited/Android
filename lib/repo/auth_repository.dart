@@ -37,4 +37,5 @@ class AuthRepository {
       throw Exception('Server error: ${response.statusCode}');
     }
   }
+
 }

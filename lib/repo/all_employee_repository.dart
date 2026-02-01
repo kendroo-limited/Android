@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../model/all_employee_model.dart';
-import '../model/employee_model.dart' hide Employee; // adjust the path if different
+import '../model/employee_model.dart' hide Employee;
 
 class AllEmployeeRepository {
   final String baseUrl;
@@ -36,14 +36,14 @@ class AllEmployeeRepository {
       final body = res.body.trimLeft();
       final looksHtml = body.startsWith('<!DOCTYPE') || body.startsWith('<html');
 
-      // Non-200, non-JSON, or HTML page ⇒ demo
+
       if (res.statusCode != 200 || !ct.contains('application/json') || looksHtml) {
         _printPreview(res.body);
         print('⚠️ Non-JSON or error response. Using demo employees.');
         return AllEmployeeResponse.fromJson(_demoEmployeesJson()).employees;
       }
 
-      // Decode
+
       Map<String, dynamic> decoded;
       try {
         decoded = jsonDecode(res.body) as Map<String, dynamic>;
@@ -68,15 +68,13 @@ class AllEmployeeRepository {
     }
   }
 
-  // ----- helpers -----
 
   void _printPreview(String body) {
     final len = body.length > 400 ? 400 : body.length;
     print('🔹 Body preview (${len} chars):\n${body.substring(0, len)}');
   }
 
-  /// Demo payload that matches your JSON-RPC envelope + model.
-  /// (All string fields are strings — no `false` booleans — so it fits your current model.)
+
   Map<String, dynamic> _demoEmployeesJson() {
     return {
       "jsonrpc": "2.0",

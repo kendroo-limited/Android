@@ -15,7 +15,7 @@ class EmployeeRepository {
       url,
       headers: {
         'Content-Type': 'application/json',
-        'Cookie': sessionCookie, // ✅ send session_id cookie
+        'Cookie': sessionCookie,
       },
     );
 
