@@ -488,10 +488,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
       title: 'Employees',
       image: Image(image: AssetImage('assets/icon/employees.png')),
     ),
-    _AppTile(
-      title: 'Products',
-      image: Image(image: AssetImage('assets/icon/products.png')),
-    ),
+    // _AppTile(
+    //   title: 'Products',
+    //   image: Image(image: AssetImage('assets/icon/products.png')),
+    // ),
     _AppTile(
       title: 'Field Force',
       image: Image(image: AssetImage('assets/icon/location.png')),
@@ -502,25 +502,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
    //   icon: Icons.person,
       image: Image(image: AssetImage('assets/icon/profile.png')),
     ),
-    _AppTile(
-      title: 'Attendance',
-      image: Image(image: AssetImage('assets/icon/calendar.png')),
-    ),
-    _AppTile(
-      title: 'Customers',
-      image: Image(image: AssetImage('assets/icon/customer.png')),
-    ),
-    _AppTile(
-      title: 'Leave',
-      image: Image(image: AssetImage('assets/icon/leave.png')),
-    ),
+    // _AppTile(
+    //   title: 'Attendance',
+    //   image: Image(image: AssetImage('assets/icon/calendar.png')),
+    // ),
+    // _AppTile(
+    //   title: 'Customers',
+    //   image: Image(image: AssetImage('assets/icon/customer.png')),
+    // ),
+    // _AppTile(
+    //   title: 'Leave',
+    //   image: Image(image: AssetImage('assets/icon/leave.png')),
+    // ),
 
-    _AppTile(
-      title: 'Projects',
-     // color: Colors.green,
-     // icon: Icons.task,
-      image: Image(image: AssetImage('assets/icon/projects.png')),
-    ),
+    // _AppTile(
+    //   title: 'Projects',
+    //  // color: Colors.green,
+    //  // icon: Icons.task,
+    //   image: Image(image: AssetImage('assets/icon/projects.png')),
+    // ),
   ];
 
 
@@ -674,7 +674,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             onTap: () {
                               Navigator.of(context).push(
                                 MaterialPageRoute(
-                                  builder: (_) => const AllEmployeesPage(),
+                                  builder: (_) => const EmployeeListView(),
                                 ),
                               );
                             },

@@ -13,6 +13,8 @@ import 'package:field_force_2/repo/memory_chat_repository.dart';
 import 'package:field_force_2/repo/project_repository.dart';
 import 'package:field_force_2/repo/task_repository.dart';
 import 'package:field_force_2/view/dashboard.dart';
+import 'package:field_force_2/view/employee/all_employee_page.dart';
+import 'package:field_force_2/view/journey_screen.dart';
 import 'package:field_force_2/view/login.dart';
 import 'package:flutter/material.dart';
 import 'package:field_force_2/provider/all_employee_provider.dart';
@@ -87,8 +89,6 @@ Future<void> main() async {
               authToken: auth.sessionCookie ?? "",
             ),
           ),
-
-
           ChangeNotifierProxyProvider<AuthProvider, AllEmployeeProvider>(
             create: (_) => AllEmployeeProvider(
               AllEmployeeRepository(baseUrl: 'https://demo.kendroo.com', sessionCookie: ''),
@@ -99,7 +99,6 @@ Future<void> main() async {
                   sessionCookie: auth.sessionCookie ?? '',
                 )),
           ),
-
           ChangeNotifierProxyProvider<AuthProvider, AttendanceProvider>(
             create: (_) => AttendanceProvider(
               AttendanceRepository(baseUrl: 'https://demo.kendroo.io', sessionCookie: ''),
@@ -110,7 +109,6 @@ Future<void> main() async {
                   sessionCookie: auth.sessionCookie ?? '',
                 )),
           ),
-
           ChangeNotifierProxyProvider<AuthProvider, ChatProvider>(
             create: (_) => ChatProvider(
               MemoryChatRepository(baseUrl: 'https://demo.kendroo.io', sessionCookie: ''),
@@ -121,7 +119,6 @@ Future<void> main() async {
                   sessionCookie: auth.sessionCookie ?? '',
                 )),
           ),
-
           ChangeNotifierProxyProvider<AuthProvider, ProductProvider>(
             create: (_) => ProductProvider(
               ProductRepository(baseUrl: 'https://demo.kendroo.com', sessionCookie: ''),
@@ -132,7 +129,6 @@ Future<void> main() async {
                   sessionCookie: auth.sessionCookie ?? '',
                 )),
           ),
-
           ChangeNotifierProxyProvider<AuthProvider, CustomerProvider>(
             create: (_) => CustomerProvider(
               CustomerRepository(baseUrl: 'https://demo.kendroo.com', sessionCookie: ''),
@@ -153,9 +149,6 @@ Future<void> main() async {
                   sessionCookie: auth.sessionCookie ?? '',
                 )),
           ),
-
-
-
           ChangeNotifierProxyProvider<AuthProvider, TaskProvider>(
             create: (_) => TaskProvider(
               repository: TaskRepository(baseUrl: "", sessionCookie: ""),
@@ -167,8 +160,6 @@ Future<void> main() async {
               ),
             ),
           ),
-
-
           ChangeNotifierProxyProvider<AuthProvider, ProjectProvider>(
             create: (_) => ProjectProvider(
               repository: ProjectRepository(baseUrl: "", sessionCookie: ""),
@@ -180,6 +171,8 @@ Future<void> main() async {
               ),
             ),
           ),
+  ChangeNotifierProvider(create: (_) => JourneyProviderView()),
+          ChangeNotifierProvider(create: (_) => EmployeeProviderView()),
         ],
         child: const MyApp(), )
      );

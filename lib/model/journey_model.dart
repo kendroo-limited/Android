@@ -203,3 +203,32 @@ class CheckInLocation {
 }
 
 
+
+class JourneyMapEvent {
+  final String type; // "IN", "OUT", "AUTO"
+  final ll.LatLng location;
+  final String address;
+  final DateTime time;
+  final bool isAuto;
+
+  JourneyMapEvent({
+    required this.type,
+    required this.location,
+    required this.address,
+    required this.time,
+    this.isAuto = false,
+  });
+}
+
+class JourneyMapData {
+  final ll.LatLng? startLocation;
+  final ll.LatLng? endLocation;
+  final List<JourneyMapEvent> events;
+
+  JourneyMapData({
+    required this.events,
+    this.startLocation,
+    this.endLocation,
+  });
+}
+

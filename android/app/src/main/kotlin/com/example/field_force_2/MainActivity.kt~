@@ -1,0 +1,33 @@
+//package com.example.field_force_2
+//
+//import io.flutter.embedding.android.FlutterActivity
+//
+//class MainActivity : FlutterActivity()
+
+package com.example.field_force_2
+
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.os.Build
+import android.os.Bundle
+import io.flutter.embedding.android.FlutterActivity
+
+class MainActivity : FlutterActivity() {
+
+    fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                "journey_tracking", // MUST match Dart
+                "Journey Tracking",
+                NotificationManager.IMPORTANCE_LOW
+            )
+            channel.description = "Tracks journey location in background"
+
+            val manager = getSystemService(NotificationManager::class.java)
+            manager.createNotificationChannel(channel)
+        }
+    }
+}
+

@@ -1,450 +1,149 @@
-// import 'dart:convert';
-//
-// import 'package:flutter/material.dart';
-// import 'package:provider/provider.dart';
-// import '../../model/all_employee_model.dart';
-// import '../../provider/all_employee_provider.dart';
-// import '../../provider/auth_provider.dart';
-// import 'employee_details_view.dart';
-//
-//
-// class AllEmployeesPage extends StatefulWidget {
-//   const AllEmployeesPage({super.key});
-//
-//   @override
-//   State<AllEmployeesPage> createState() => _AllEmployeesPageState();
-// }
-//
-// class _AllEmployeesPageState extends State<AllEmployeesPage> {
-//   @override
-//   void initState() {
-//     super.initState();
-//     Future.microtask(() =>
-//         Provider.of<AllEmployeeProvider>(context, listen: false)
-//             .loadEmployees());
-//   }
-//
-//   // @override
-//   // Widget build(BuildContext context) {
-//   //   final provider = context.watch<AllEmployeeProvider>();
-//   //
-//   //   return Scaffold(
-//   //     appBar: AppBar(
-//   //       title: const Text('All Employees'),
-//   //       centerTitle: true,
-//   //     ),
-//   //     body: provider.isLoading
-//   //         ? const Center(child: CircularProgressIndicator())
-//   //         : provider.error != null
-//   //         ? Center(
-//   //       child: Text(provider.error!,
-//   //           style: const TextStyle(color: Colors.redAccent)),
-//   //     )
-//   //         : ListView.separated(
-//   //       padding: const EdgeInsets.all(12),
-//   //       separatorBuilder: (_, __) => const Divider(),
-//   //       itemCount: provider.employees.length,
-//   //       itemBuilder: (_, index) {
-//   //         final emp = provider.employees[index];
-//   //         return _buildEmployeeTile(emp);
-//   //       },
-//   //     ),
-//   //   );
-//   // }
-//
-//   // Widget _buildEmployeeTile(Employee emp) {
-//   //   return ListTile(
-//   //     leading: CircleAvatar(
-//   //       radius: 25,
-//   //       backgroundColor: Colors.grey.shade200,
-//   //       child: ClipOval(
-//   //         child: Image.network(
-//   //           'https://erp.kendroo.io${emp.imageUrl}',
-//   //           headers: {
-//   //             'Cookie': Provider.of<AuthProvider>(context, listen: false).sessionCookie ?? '',
-//   //           },
-//   //           fit: BoxFit.cover,
-//   //           width: 50,
-//   //           height: 50,
-//   //           errorBuilder: (context, error, stackTrace) =>
-//   //           const Icon(Icons.person, size: 30, color: Colors.grey),
-//   //         ),
-//   //       ),
-//   //     ),
-//   //
-//   //     title: Text(emp.name,
-//   //         style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
-//   //     subtitle: Text('${emp.jobTitle}\n${emp.department}'),
-//   //     isThreeLine: true,
-//   //     trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-//   //     onTap: () {
-//   //       Navigator.push(
-//   //         context,
-//   //         MaterialPageRoute(
-//   //           builder: (_) => EmployeeDetailsView(employee: emp),
-//   //         ),
-//   //       );
-//   //     },
-//   //   );
-//   // }
-//
-//
-//   @override
-//   Widget build(BuildContext context) {
-//     final provider = context.watch<AllEmployeeProvider>();
-//
-//     return Scaffold(
-//       appBar: AppBar(
-//         title: const Text('All Employees'),
-//         centerTitle: true,
-//       ),
-//       body: provider.isLoading
-//           ? const Center(child: CircularProgressIndicator())
-//           : provider.error != null
-//           ? Center(
-//         child: Text(
-//           provider.error!,
-//           style: const TextStyle(color: Colors.redAccent),
-//         ),
-//       )
-//           : LayoutBuilder(
-//         builder: (context, c)
-//     {
-//       final w = c.maxWidth;
-//
-//       // Simple breakpoints
-//       final isPhone = w < 600;
-//       final isTablet = w >= 600 && w < 1024;
-//       final crossAxisCount = isPhone ? 1 : (isTablet ? 2 : 3);
-//
-//
-//       // Scale spacing by width
-//       final hPad = w < 360 ? 8.0 : 12.0;
-//       final vGap = w < 360 ? 6.0 : 10.0;
-//
-//
-//       // PHONE: List
-//       return ListView.separated(
-//         padding: EdgeInsets.all(hPad),
-//         separatorBuilder: (_, __) => SizedBox(height: vGap),
-//         itemCount: provider.employees.length,
-//         itemBuilder: (_, i) =>
-//             _buildEmployeeTile(
-//               context,
-//               provider.employees[i],
-//               // pass width so tile can adapt sizes
-//               w,
-//             ),
-//       );
-//
-//
-//         },
-//       ),
-//     );
-//   }
-//
-//
-//   // Widget _buildEmployeeTile(BuildContext context, Employee emp, double parentW) {
-//   //   final session = Provider.of<AuthProvider>(context, listen: false).sessionCookie ?? '';
-//   //
-//   //   // Responsive sizes
-//   //   final avatar = parentW < 340 ? 20.0 : (parentW < 420 ? 24.0 : 25.0);
-//   //   final titleSize = parentW < 340 ? 14.0 : (parentW < 420 ? 15.0 : 16.0);
-//   //   final subSize   = parentW < 340 ? 12.0 : 13.0;
-//   //   final dense     = parentW < 360;
-//   //
-//   //   return ListTile(
-//   //     dense: dense,
-//   //     visualDensity: dense ? const VisualDensity(horizontal: -1, vertical: -2) : VisualDensity.compact,
-//   //     leading: CircleAvatar(
-//   //       radius: avatar,
-//   //       backgroundColor: Colors.grey.shade200,
-//   //       child: ClipOval(
-//   //         child: Image.network(
-//   //           'https://erp.kendroo.io${emp.imageUrl}',
-//   //           headers: {'Cookie': session},
-//   //           fit: BoxFit.cover,
-//   //           width: avatar * 2,
-//   //           height: avatar * 2,
-//   //           errorBuilder: (_, __, ___) => const Icon(Icons.person, size: 22, color: Colors.grey),
-//   //         ),
-//   //       ),
-//   //     ),
-//   //     title: Text(
-//   //       emp.name,
-//   //       maxLines: 1,
-//   //       overflow: TextOverflow.ellipsis,
-//   //       style: TextStyle(fontWeight: FontWeight.w600, fontSize: titleSize),
-//   //       textScaler: MediaQuery.textScalerOf(context),
-//   //     ),
-//   //     subtitle: Text(
-//   //       '${emp.jobTitle}\n${emp.department}',
-//   //       maxLines: parentW < 360 ? 2 : 3,
-//   //       overflow: TextOverflow.ellipsis,
-//   //       style: TextStyle(fontSize: subSize, color: Colors.black87),
-//   //       textScaler: MediaQuery.textScalerOf(context),
-//   //     ),
-//   //     isThreeLine: parentW >= 360,
-//   //     trailing: parentW < 340 ? null : const Icon(Icons.arrow_forward_ios, size: 16),
-//   //     onTap: () {
-//   //       Navigator.push(
-//   //         context,
-//   //         MaterialPageRoute(builder: (_) => EmployeeDetailsView(employee: emp)),
-//   //       );
-//   //     },
-//   //   );
-//   // }
-//
-//
-//   Widget _buildEmployeeTile(BuildContext context, Employee emp, double parentW) {
-//     final session = Provider.of<AuthProvider>(context, listen: false).sessionCookie ?? '';
-//
-//     // Responsive sizes
-//     final avatarRadius = parentW < 340 ? 20.0 : (parentW < 420 ? 24.0 : 25.0);
-//     final titleSize    = parentW < 340 ? 14.0 : (parentW < 420 ? 15.0 : 16.0);
-//     final subSize      = parentW < 340 ? 12.0 : 13.0;
-//     final dense        = parentW < 360;
-//
-//     // 🔹 Build avatar ImageProvider from base64 (like you did for customers)
-//     ImageProvider? avatarImage;
-//     if (emp.imageUrl.isNotEmpty) {
-//       try {
-//         final bytes = base64Decode(emp.imageUrl);
-//         avatarImage = MemoryImage(bytes);
-//       } catch (e) {
-//         debugPrint('Failed to decode employee image: $e');
-//       }
-//     }
-//
-//     // If you ALSO still have URL-based images and want to fallback to that
-//     // when there is no base64, you could do:
-//     //
-//     // if (avatarImage == null && emp.imageUrl.isNotEmpty) {
-//     //   avatarImage = NetworkImage(
-//     //     'https://erp.kendroo.io${emp.imageUrl}',
-//     //     headers: {'Cookie': session},
-//     //   );
-//     // }
-//
-//     return ListTile(
-//       dense: dense,
-//       visualDensity: dense
-//           ? const VisualDensity(horizontal: -1, vertical: -2)
-//           : VisualDensity.compact,
-//       leading: CircleAvatar(
-//         radius: avatarRadius,
-//         backgroundColor: avatarImage == null
-//             ? Colors.blue.shade100 // or any color you prefer for employees
-//             : Colors.transparent,
-//         backgroundImage: avatarImage,
-//         child: avatarImage == null
-//             ? const Icon(
-//           Icons.person,
-//           size: 22,
-//           color: Colors.blue,
-//         )
-//             : null,
-//       ),
-//       title: Text(
-//         emp.name,
-//         maxLines: 1,
-//         overflow: TextOverflow.ellipsis,
-//         style: TextStyle(
-//           fontWeight: FontWeight.w600,
-//           fontSize: titleSize,
-//         ),
-//         textScaler: MediaQuery.textScalerOf(context),
-//       ),
-//       subtitle: Text(
-//         '${emp.jobTitle}\n${emp.department}',
-//         maxLines: parentW < 360 ? 2 : 3,
-//         overflow: TextOverflow.ellipsis,
-//         style: TextStyle(
-//           fontSize: subSize,
-//           color: Colors.black87,
-//         ),
-//         textScaler: MediaQuery.textScalerOf(context),
-//       ),
-//       isThreeLine: parentW >= 360,
-//       trailing:
-//       parentW < 340 ? null : const Icon(Icons.arrow_forward_ios, size: 16),
-//       onTap: () {
-//         Navigator.push(
-//           context,
-//           MaterialPageRoute(
-//             builder: (_) => EmployeeDetailsView(employee: emp),
-//           ),
-//         );
-//       },
-//     );
-//   }
-//
-//
-// }
-
-import 'dart:convert';
-
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
-import '../../model/all_employee_model.dart';
-import '../../provider/all_employee_provider.dart';
 import '../../provider/auth_provider.dart';
-import 'employee_details_view.dart';
+import '../../repo/odoo_json_rpc.dart';
 
-class AllEmployeesPage extends StatefulWidget {
-  const AllEmployeesPage({super.key});
+class EmployeeProviderView extends ChangeNotifier {
+  bool isSaving = false;
+  List<Map<String, dynamic>> employees = [];
+  String locationStatus = 'Ready';
 
-  @override
-  State<AllEmployeesPage> createState() => _AllEmployeesPageState();
+  // Initialize OdooSessionRpc with the cookie
+  OdooSessionRpc _rpc(String cookie) {
+    return OdooSessionRpc(
+      baseUrl: "https://demo.kendroo.com",
+      sessionCookie: cookie,
+    );
+  }
+
+  // Fetch employee data from Odoo
+  Future<void> fetchEmployees(String cookie, {bool updateStatus = true}) async {
+    isSaving = true;
+    notifyListeners();  // Notify listeners to show loading
+
+    try {
+      final rows = await _rpc(cookie).fetchEmployeeData(
+        domain: [], // You can filter employees as needed
+        fields: ['name', 'work_phone', 'work_email', 'job_id', 'department_id'], // Fields to retrieve
+      );
+      print("Rows fetched:");
+      print("Rows fetched: $rows");  // Print the fetched rows
+
+      employees = rows.map((row) {
+        // Extract relevant fields from each row and handle nested fields
+        return {
+          'name': row['name'] ?? 'No Name',
+          'work_phone': row['work_phone'] ?? 'No Phone',
+          'work_email': row['work_email'] ?? 'No Email',
+          'department': row['department_id'] != null && row['department_id'].isNotEmpty
+              ? row['department_id'][1] ?? 'No Department'
+              : 'No Department',
+          'job_title': row['job_id'] != null ? row['job_id'] ?? 'No Job Title' : 'No Job Title',
+        };
+      }).toList();
+
+      print("employees: $employees");
+
+      if (rows.isEmpty) {
+        locationStatus = "No employees found.";
+      } else {
+        locationStatus = "Employees loaded ✅";
+      }
+    } catch (e) {
+      locationStatus = "Server error: $e";
+    } finally {
+      isSaving = false;
+      notifyListeners();  // Notify listeners to refresh the UI after data has been fetched
+    }
+  }
 }
 
-class _AllEmployeesPageState extends State<AllEmployeesPage> {
+class EmployeeListView extends StatefulWidget {
+  const EmployeeListView({super.key});
+
+  @override
+  State<EmployeeListView> createState() => _EmployeeListViewState();
+}
+
+class _EmployeeListViewState extends State<EmployeeListView> {
+ // late EmployeeProviderView _employeeProviderView;
+  late AuthProvider auth;
+
   @override
   void initState() {
     super.initState();
-    Future.microtask(
-          () => Provider.of<AllEmployeeProvider>(context, listen: false)
-          .loadEmployees(),
-    );
+    // Initialize EmployeeProviderView and AuthProvider
+    auth = Provider.of<AuthProvider>(context, listen: false);
+    final employeeProvider = Provider.of<EmployeeProviderView>(context, listen: false);
+
+    // Fetch employees as soon as the page is loaded
+    if (auth.sessionCookie != null) {
+      employeeProvider.fetchEmployees(auth.sessionCookie!); // Pass the session cookie
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final provider = context.watch<AllEmployeeProvider>();
-
     return Scaffold(
       appBar: AppBar(
-        title: const Text('All Employees'),
+        title: const Text('Employee List'),
         centerTitle: true,
       ),
-      body: provider.isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : provider.error != null
-          ? Center(
-        child: Text(
-          provider.error!,
-          style: const TextStyle(color: Colors.redAccent),
-        ),
-      )
-          : LayoutBuilder(
-        builder: (context, c) {
-          final w = c.maxWidth;
-
-
-          final isPhone = w < 600;
-          final isTablet = w >= 600 && w < 1024;
-          final crossAxisCount =
-          isPhone ? 1 : (isTablet ? 2 : 3);
-
-
-          final hPad = w < 360 ? 8.0 : 12.0;
-          final vGap = w < 360 ? 6.0 : 10.0;
-
-
-          return ListView.separated(
-            padding: EdgeInsets.all(hPad),
-            separatorBuilder: (_, __) => SizedBox(height: vGap),
-            itemCount: provider.employees.length,
-            itemBuilder: (_, i) => _buildEmployeeTile(
-              context,
-              provider.employees[i],
-              w,
-            ),
-          );
+      body: Consumer<EmployeeProviderView>(
+        builder: (context, employeeProvider, child) {
+          return employeeProvider.isSaving
+              ? const Center(child: CircularProgressIndicator())
+              : _buildEmployeeList(employeeProvider);
         },
       ),
     );
   }
 
-  Widget _buildEmployeeTile(
-      BuildContext context, Employee emp, double parentW) {
-    final session =
-        Provider.of<AuthProvider>(context, listen: false).sessionCookie ?? '';
+  Widget _buildEmployeeList(EmployeeProviderView employeeProvider) {
+    print("Employee List: ${employeeProvider.employees.toString()}");
 
-
-    final avatarRadius =
-    parentW < 340 ? 20.0 : (parentW < 420 ? 24.0 : 25.0);
-    final titleSize =
-    parentW < 340 ? 14.0 : (parentW < 420 ? 15.0 : 16.0);
-    final subSize = parentW < 340 ? 12.0 : 13.0;
-    final dense = parentW < 360;
-
-
-    ImageProvider? avatarImage;
-
-
-    if (emp.imageUrl.isNotEmpty) {
-      try {
-        final bytes = base64Decode(emp.imageUrl);
-        avatarImage = MemoryImage(bytes);
-      } catch (e) {
-        debugPrint('Failed to decode employee base64 image: $e');
-      }
+    if (employeeProvider.employees.isEmpty && !employeeProvider.isSaving) {
+      return const Padding(
+        padding: EdgeInsets.all(20.0),
+        child: Text("No employees available"),
+      );
     }
 
+    return ListView.separated(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: employeeProvider.employees.length,
+      separatorBuilder: (_, __) => const Divider(height: 1),
+      itemBuilder: (context, index) {
+        final item = employeeProvider.employees[index];
+        final name = item['name'] ?? 'Unknown';
+        final phone = item['work_phone'] ?? 'No Phone';
+        final email = item['work_email'] ?? 'No Email';
+   //     final department = item['department'] ?? 'No Department'; // Use correct key
+     //  final jobTitle = item['job_title'] ?? 'No Job Title'; // Use correct key
 
-    if (avatarImage == null && emp.imageUrl.isNotEmpty) {
-      try {
-        avatarImage = NetworkImage(
-          'https://demo.kendroo.com${emp.imageUrl}',
-          headers: {'Cookie': session},
-        );
-      } catch (e) {
-        debugPrint('Failed to create NetworkImage for employee: $e');
-      }
-    }
-
-    return ListTile(
-      dense: dense,
-      visualDensity: dense
-          ? const VisualDensity(horizontal: -1, vertical: -2)
-          : VisualDensity.compact,
-      leading: CircleAvatar(
-        radius: avatarRadius,
-        backgroundColor:
-        avatarImage == null ? Colors.blue.shade100 : Colors.transparent,
-        backgroundImage: avatarImage,
-        child: avatarImage == null
-            ? const Icon(
-          Icons.person,
-          size: 22,
-          color: Colors.blue,
-        )
-            : null,
-      ),
-      title: Text(
-        emp.name,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: TextStyle(
-          fontWeight: FontWeight.w600,
-          fontSize: titleSize,
-        ),
-        textScaler: MediaQuery.textScalerOf(context),
-      ),
-      subtitle: Text(
-        '${emp.jobTitle}\n${emp.department}',
-        maxLines: parentW < 360 ? 2 : 3,
-        overflow: TextOverflow.ellipsis,
-        style: TextStyle(
-          fontSize: subSize,
-          color: Colors.black87,
-        ),
-        textScaler: MediaQuery.textScalerOf(context),
-      ),
-      isThreeLine: parentW >= 360,
-      trailing:
-      parentW < 340 ? null : const Icon(Icons.arrow_forward_ios, size: 16),
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => EmployeeDetailsView(employee: emp),
+        return ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: const CircleAvatar(
+            backgroundColor: Colors.blue,
+            child: Icon(Icons.person, color: Colors.white, size: 18),
           ),
+          title: Text(name, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+        //  subtitle: Text('$jobTitle\n$department', style: const TextStyle(fontSize: 11)),
+          trailing: Container(
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(color: Colors.grey[200], borderRadius: BorderRadius.circular(4)),
+            child: Text(
+              email,
+              style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+            ),
+          ),
+          onTap: () {
+            // Handle tap to show employee details if needed
+          },
         );
       },
     );
   }
 }
-

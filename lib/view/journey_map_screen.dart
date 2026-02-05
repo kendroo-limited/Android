@@ -291,23 +291,224 @@ import 'package:flutter_map/flutter_map.dart' as fm;
 import 'package:latlong2/latlong.dart' as ll;
 import '../model/journey_model.dart';
 
+// class JourneyMapScreen extends StatelessWidget {
+//   final Journey journey;
+//   final ll.LatLng? startLocation;
+//   final ll.LatLng? endLocation;
+//
+//   JourneyMapScreen({
+//     super.key,
+//     required this.journey,
+//     this.startLocation,
+//     this.endLocation,
+//   });
+//
+//   final MapController _mapController = MapController();
+//
+//   final ll.LatLng _fallbackCenter = const ll.LatLng(23.780573, 90.279239);
+//
+//   ll.LatLng get _mapCenter => startLocation ?? _fallbackCenter;
+//
+//   List<Marker> _buildMapMarkers(double screenWidth) {
+//     final markers = <Marker>[];
+//
+//     final bool verySmall = screenWidth < 340;
+//     final bool small = screenWidth < 400;
+//
+//     final double startEndIconSize = small ? 30 : 36;
+//     final double eventIconSize = small ? 22 : 26;
+//     final double labelFontSize = verySmall ? 8 : (small ? 9 : 10);
+//
+//
+//     if (startLocation != null) {
+//       markers.add(
+//         Marker(
+//           point: startLocation!,
+//           width: 50,
+//           height: 50,
+//           alignment: Alignment.topCenter,
+//           child: Icon(
+//             Icons.flag,
+//             size: startEndIconSize,
+//             color: Colors.indigo,
+//           ),
+//         ),
+//       );
+//     }
+//
+//
+//     if (endLocation != null) {
+//       markers.add(
+//         Marker(
+//           point: endLocation!,
+//           width: 50,
+//           height: 50,
+//           alignment: Alignment.topCenter,
+//           child: Icon(
+//             Icons.place,
+//             size: startEndIconSize,
+//             color: Colors.red,
+//           ),
+//         ),
+//       );
+//     }
+//
+//
+//     for (final e in journey.events) {
+//       final bool isIn = e.type == 'IN';
+//       final bool isOut = e.type == 'OUT';
+//       final bool isAuto = e.type == 'AUTO' || (e is JourneyCheckEvent && e.isAuto);
+//
+//       final String shortLabel =
+//       e.address.contains(',') ? e.address.split(',').first : e.address;
+//
+//       IconData icon;
+//       Color color;
+//
+//       if (isAuto) {
+//         icon = Icons.push_pin;
+//         color = Colors.purple;
+//       } else if (isIn) {
+//         icon = Icons.login;
+//         color = Colors.green;
+//       } else {
+//         icon = Icons.logout;
+//         color = Colors.orange;
+//       }
+//
+//       markers.add(
+//         Marker(
+//           point: e.location,
+//           width: 120,
+//           height: 80,
+//           alignment: Alignment.topCenter,
+//           child: Column(
+//             mainAxisSize: MainAxisSize.min,
+//             children: [
+//               Icon(icon, size: eventIconSize, color: color),
+//               const SizedBox(height: 2),
+//               if (isAuto || isIn)
+//                 Container(
+//                   padding:
+//                   const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+//                   decoration: BoxDecoration(
+//                     color: Colors.white,
+//                     borderRadius: BorderRadius.circular(4),
+//                     boxShadow: [
+//                       BoxShadow(
+//                         color: Colors.black.withOpacity(0.15),
+//                         blurRadius: 3,
+//                         offset: const Offset(0, 1),
+//                       ),
+//                     ],
+//                   ),
+//                   child: Text(
+//                     shortLabel,
+//                     maxLines: 1,
+//                     overflow: TextOverflow.ellipsis,
+//                     style: TextStyle(
+//                       fontSize: labelFontSize,
+//                       fontWeight: FontWeight.w500,
+//                     ),
+//                   ),
+//                 ),
+//             ],
+//           ),
+//         ),
+//       );
+//     }
+//
+//     return markers;
+//   }
+//
+//   List<ll.LatLng> _buildRoutePoints() {
+//     final points = <ll.LatLng>[];
+//
+//     if (journey.startLocation != null) {
+//       points.add(journey.startLocation!);
+//     }
+//
+//     for (final e in journey.events) {
+//       points.add(e.location);
+//     }
+//
+//     if (journey.endLocation != null) {
+//       points.add(journey.endLocation!);
+//     }
+//
+//     return points;
+//   }
+//
+//   @override
+//   Widget build(BuildContext context) {
+//     final routePoints = _buildRoutePoints();
+//     final width = MediaQuery.of(context).size.width;
+//
+//     return Scaffold(
+//       appBar: AppBar(
+//         title: const Text('Journey Map'),
+//         backgroundColor: Colors.indigo,
+//       ),
+//       body: FlutterMap(
+//         mapController: _mapController,
+//         options: MapOptions(
+//           initialCenter: _mapCenter,
+//           initialZoom: 12,
+//           interactionOptions: const InteractionOptions(
+//             flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
+//           ),
+//         ),
+//         children: [
+//           TileLayer(
+//             urlTemplate:
+//             'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+//             subdomains: const ['a', 'b', 'c'],
+//             userAgentPackageName: 'com.kendroo.gpslocator',
+//           ),
+//           MarkerLayer(
+//             markers: _buildMapMarkers(width),
+//           ),
+//           if (routePoints.length >= 2)
+//             PolylineLayer(
+//               polylines: [
+//                 fm.Polyline(
+//                   points: routePoints,
+//                   color: Colors.indigo,
+//                   strokeWidth: 4,
+//                   pattern: const StrokePattern.dotted(),
+//                 ),
+//               ],
+//             ),
+//         ],
+//       ),
+//     );
+//   }
+// }
+
+import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart' as ll;
+import 'package:flutter_map/flutter_map.dart' as fm;
+
+
+
+import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart' as ll;
+
 class JourneyMapScreen extends StatelessWidget {
-  final Journey journey;
-  final ll.LatLng? startLocation;
-  final ll.LatLng? endLocation;
+  final JourneyMapData data;
 
   JourneyMapScreen({
     super.key,
-    required this.journey,
-    this.startLocation,
-    this.endLocation,
+    required this.data,
   });
 
   final MapController _mapController = MapController();
-
   final ll.LatLng _fallbackCenter = const ll.LatLng(23.780573, 90.279239);
 
-  ll.LatLng get _mapCenter => startLocation ?? _fallbackCenter;
+  ll.LatLng get _mapCenter =>
+      data.startLocation ?? (data.events.isNotEmpty ? data.events.first.location : _fallbackCenter);
 
   List<Marker> _buildMapMarkers(double screenWidth) {
     final markers = <Marker>[];
@@ -319,11 +520,11 @@ class JourneyMapScreen extends StatelessWidget {
     final double eventIconSize = small ? 22 : 26;
     final double labelFontSize = verySmall ? 8 : (small ? 9 : 10);
 
-
-    if (startLocation != null) {
+    // Start marker
+    if (data.startLocation != null) {
       markers.add(
         Marker(
-          point: startLocation!,
+          point: data.startLocation!,
           width: 50,
           height: 50,
           alignment: Alignment.topCenter,
@@ -336,11 +537,11 @@ class JourneyMapScreen extends StatelessWidget {
       );
     }
 
-
-    if (endLocation != null) {
+    // End marker
+    if (data.endLocation != null) {
       markers.add(
         Marker(
-          point: endLocation!,
+          point: data.endLocation!,
           width: 50,
           height: 50,
           alignment: Alignment.topCenter,
@@ -353,11 +554,10 @@ class JourneyMapScreen extends StatelessWidget {
       );
     }
 
-
-    for (final e in journey.events) {
+    // Events
+    for (final e in data.events) {
       final bool isIn = e.type == 'IN';
-      final bool isOut = e.type == 'OUT';
-      final bool isAuto = e.type == 'AUTO' || (e is JourneyCheckEvent && e.isAuto);
+      final bool isAuto = e.isAuto || e.type == 'AUTO';
 
       final String shortLabel =
       e.address.contains(',') ? e.address.split(',').first : e.address;
@@ -379,7 +579,7 @@ class JourneyMapScreen extends StatelessWidget {
       markers.add(
         Marker(
           point: e.location,
-          width: 120,
+          width: 140,
           height: 80,
           alignment: Alignment.topCenter,
           child: Column(
@@ -387,10 +587,10 @@ class JourneyMapScreen extends StatelessWidget {
             children: [
               Icon(icon, size: eventIconSize, color: color),
               const SizedBox(height: 2),
+              // show label for IN/AUTO to reduce clutter (you can show for OUT too if you want)
               if (isAuto || isIn)
                 Container(
-                  padding:
-                  const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(4),
@@ -424,19 +624,26 @@ class JourneyMapScreen extends StatelessWidget {
   List<ll.LatLng> _buildRoutePoints() {
     final points = <ll.LatLng>[];
 
-    if (journey.startLocation != null) {
-      points.add(journey.startLocation!);
+    if (data.startLocation != null) {
+      points.add(data.startLocation!);
     }
-
-    for (final e in journey.events) {
+    for (final e in data.events) {
       points.add(e.location);
     }
-
-    if (journey.endLocation != null) {
-      points.add(journey.endLocation!);
+    if (data.endLocation != null) {
+      points.add(data.endLocation!);
     }
 
-    return points;
+    // remove duplicates (optional)
+    final unique = <ll.LatLng>[];
+    for (final p in points) {
+      if (unique.isEmpty ||
+          unique.last.latitude != p.latitude ||
+          unique.last.longitude != p.longitude) {
+        unique.add(p);
+      }
+    }
+    return unique;
   }
 
   @override
@@ -460,22 +667,18 @@ class JourneyMapScreen extends StatelessWidget {
         ),
         children: [
           TileLayer(
-            urlTemplate:
-            'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+            urlTemplate: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
             subdomains: const ['a', 'b', 'c'],
             userAgentPackageName: 'com.kendroo.gpslocator',
           ),
-          MarkerLayer(
-            markers: _buildMapMarkers(width),
-          ),
+          MarkerLayer(markers: _buildMapMarkers(width)),
           if (routePoints.length >= 2)
             PolylineLayer(
               polylines: [
-                fm.Polyline(
+                Polyline(
                   points: routePoints,
                   color: Colors.indigo,
                   strokeWidth: 4,
-                  pattern: const StrokePattern.dotted(),
                 ),
               ],
             ),
@@ -484,3 +687,5 @@ class JourneyMapScreen extends StatelessWidget {
     );
   }
 }
+
+

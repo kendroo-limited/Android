@@ -36,7 +36,7 @@ String? database;
       Uri.parse("https://demo.kendroo.com/web/session/get_session_info"),
       headers: {
         "Content-Type": "application/json",
-        "Cookie": sessionCookie!,        // ← send same cookie back
+        "Cookie": sessionCookie!,
       },
       body: jsonEncode({
         "jsonrpc": "2.0",
