@@ -14,6 +14,7 @@ import 'package:field_force_2/repo/project_repository.dart';
 import 'package:field_force_2/repo/task_repository.dart';
 import 'package:field_force_2/view/dashboard.dart';
 import 'package:field_force_2/view/employee/all_employee_page.dart';
+import 'package:field_force_2/view/employee_profile_page.dart';
 import 'package:field_force_2/view/journey_screen.dart';
 import 'package:field_force_2/view/login.dart';
 import 'package:flutter/material.dart';
@@ -173,6 +174,7 @@ Future<void> main() async {
           ),
   ChangeNotifierProvider(create: (_) => JourneyProviderView()),
           ChangeNotifierProvider(create: (_) => EmployeeProviderView()),
+          ChangeNotifierProvider(create: (_) => EmployeeProfileProvider()),
         ],
         child: const MyApp(), )
      );

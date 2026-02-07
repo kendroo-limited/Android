@@ -1,11 +1,9 @@
 import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:latlong2/latlong.dart' as ll;
 import 'package:location/location.dart' as loc;
 import 'package:provider/provider.dart';
-
 import '../model/journey_model.dart';
 import '../provider/auth_provider.dart';
 import '../repo/odoo_json_rpc.dart';
@@ -22,10 +20,9 @@ class JourneyProviderView extends ChangeNotifier {
   List<Map<String, dynamic>> historyRows = [];
   String locationStatus = 'Ready';
   bool isSaving = false;
-
-  // Guard flag to prevent infinite loops in StatelessWidgets
   bool _hasFetchedInitial = false;
-
+  int? _currentFieldForceId;
+  bool _sessionClosed = false;
   OdooSessionRpc _rpc(String cookie) {
     return OdooSessionRpc(
       baseUrl: "https://demo.kendroo.com",
@@ -33,7 +30,6 @@ class JourneyProviderView extends ChangeNotifier {
     );
   }
 
-  // Called by the UI
   void init(String cookie, int uid) {
     if (_hasFetchedInitial || isSaving) return;
     _hasFetchedInitial = true;
@@ -65,12 +61,21 @@ class JourneyProviderView extends ChangeNotifier {
     try {
       final point = await _getLatLng();
       final address = await getAddressFromLatLng(point);
-      await _rpc(cookie).checkInCreateOrUpdate(
-        uid: uid,
-        startLocation: address,
+      // await _rpc(cookie).checkInCreateOrUpdate(
+      //   uid: uid,
+      //   startLocation: address,
+      //   latitude: point.latitude,
+      //   longitude: point.longitude,
+      //   journeyTime: DateTime.now(),
+      // );
+
+      await _rpc(cookie).addJourneyHistoryLine(
+        fieldForceId: uid,
         latitude: point.latitude,
         longitude: point.longitude,
+        location: address,
         journeyTime: DateTime.now(),
+
       );
       locationStatus = "Auto update sent ✅ (${DateTime.now().toLocal()})";
       notifyListeners();
@@ -102,7 +107,11 @@ class JourneyProviderView extends ChangeNotifier {
         );
         startAddress = address;
         endAddress = null;
-        isCheckedIn = true; // Set locally first for immediate UI response
+        isCheckedIn = true;
+
+        _currentFieldForceId = uid;
+        historyRows.clear();
+        _sessionClosed = false;
 
         await BackgroundJourneyService.start(
           cookie: cookie,
@@ -125,9 +134,12 @@ class JourneyProviderView extends ChangeNotifier {
         endAddress = address;
         isCheckedIn = false; // Set locally first
         locationStatus = "Check-out saved ✅";
+
+        historyRows.clear();
+        _currentFieldForceId = null;
+        _sessionClosed = true;
       }
 
-      // Fetch history to update the list, but we keep our local isCheckedIn state
       await fetchHistory(cookie, uid, updateStatus: false);
     } catch (e) {
       locationStatus = "Error: $e";
@@ -138,6 +150,7 @@ class JourneyProviderView extends ChangeNotifier {
   }
 
   Future<void> fetchHistory(String cookie, int uid, {bool updateStatus = true}) async {
+    if (_sessionClosed) return;
     isSaving = true;
     notifyListeners();
     try {
@@ -213,21 +226,212 @@ class JourneyProviderView extends ChangeNotifier {
   }
 }
 
+// class JourneyScreen extends StatelessWidget {
+//   const JourneyScreen({super.key});
+//
+//   @override
+//   Widget build(BuildContext context) {
+//
+//     final auth = context.read<AuthProvider>();
+//
+//     final journey = context.watch<JourneyProviderView>();
+//
+//
+//     if (!journey.isSaving && journey.historyRows.isEmpty) {
+//       Future.microtask(() =>
+//           journey.init(auth.sessionCookie!, auth.user!.uid)
+//       );
+//     }
+//
+//     return Scaffold(
+//       appBar: AppBar(
+//         title: const Text("Journey Tracker"),
+//         backgroundColor: Colors.indigo,
+//         elevation: 0,
+//       ),
+//       body: SafeArea(
+//         child: Column(
+//           children: [
+//             Expanded(
+//               child: RefreshIndicator(
+//                 onRefresh: () => journey.fetchHistory(auth.sessionCookie!, auth.user!.uid),
+//                 child: SingleChildScrollView(
+//                   physics: const AlwaysScrollableScrollPhysics(),
+//                   padding: const EdgeInsets.all(16),
+//                   child: Column(
+//                     children: [
+//                       _buildStatusCard(journey),
+//                       const SizedBox(height: 12),
+//                       Text(
+//                         journey.locationStatus,
+//                         style: const TextStyle(fontStyle: FontStyle.italic, color: Colors.grey, fontSize: 12),
+//                       ),
+//                       const SizedBox(height: 20),
+//                       const Align(
+//                         alignment: Alignment.centerLeft,
+//                         child: Text("History Logs", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+//                       ),
+//                       const Divider(),
+//                       _buildHistoryList(journey),
+//                     ],
+//                   ),
+//                 ),
+//               ),
+//             ),
+//
+//             // Map Button
+//             Padding(
+//               padding: const EdgeInsets.symmetric(horizontal: 16.0),
+//               child: SizedBox(
+//                 width: double.infinity,
+//                 child: OutlinedButton.icon(
+//                   onPressed: journey.historyRows.isEmpty ? null : () {
+//                     final data = journey.buildMapDataFromHistory();
+//                     Navigator.push(
+//                       context,
+//                       MaterialPageRoute(builder: (_) => JourneyMapScreen(data: data)),
+//                     );
+//                   },
+//                   icon: const Icon(Icons.map_outlined),
+//                   label: const Text("VIEW MAP"),
+//                   style: OutlinedButton.styleFrom(
+//                     padding: const EdgeInsets.symmetric(vertical: 14),
+//                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+//                   ),
+//                 ),
+//               ),
+//             ),
+//             const SizedBox(height: 10),
+//             _buildBottomBar(context, journey, auth),
+//           ],
+//         ),
+//       ),
+//     );
+//   }
+//
+//   Widget _buildStatusCard(JourneyProviderView journey) {
+//     return Card(
+//       elevation: 2,
+//       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+//       child: Padding(
+//         padding: const EdgeInsets.all(16),
+//         child: Column(
+//           children: [
+//             _row(Icons.play_arrow, Colors.green, "Started at:", journey.startAddress),
+//             const Divider(height: 24),
+//             _row(Icons.stop, Colors.red, "Ended at:", journey.endAddress),
+//             if (journey.isSaving)
+//               const Padding(
+//                 padding: EdgeInsets.only(top: 12.0),
+//                 child: LinearProgressIndicator(minHeight: 2),
+//               ),
+//           ],
+//         ),
+//       ),
+//     );
+//   }
+//
+//   Widget _row(IconData icon, Color color, String label, String? value) {
+//     return Row(
+//       children: [
+//         Icon(icon, color: color, size: 28),
+//         const SizedBox(width: 12),
+//         Expanded(
+//           child: Column(
+//             crossAxisAlignment: CrossAxisAlignment.start,
+//             children: [
+//               Text(label, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+//               Text(
+//                 value ?? "Not recorded",
+//                 style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+//                 maxLines: 1,
+//                 overflow: TextOverflow.ellipsis,
+//               ),
+//             ],
+//           ),
+//         )
+//       ],
+//     );
+//   }
+//
+//   Widget _buildHistoryList(JourneyProviderView journey) {
+//     if (journey.historyRows.isEmpty && !journey.isSaving) {
+//       return const Padding(
+//         padding: EdgeInsets.all(20.0),
+//         child: Text("No activity yet"),
+//       );
+//     }
+//     return ListView.separated(
+//       shrinkWrap: true,
+//       physics: const NeverScrollableScrollPhysics(),
+//       itemCount: journey.historyRows.length,
+//       separatorBuilder: (_, __) => const Divider(height: 1),
+//       itemBuilder: (context, index) {
+//         final item = journey.historyRows[index];
+//         final isCheckIn = item['action'].toString().contains('IN');
+//         return ListTile(
+//           contentPadding: EdgeInsets.zero,
+//           leading: CircleAvatar(
+//             backgroundColor: isCheckIn ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
+//             child: Icon(isCheckIn ? Icons.login : Icons.logout,
+//                 color: isCheckIn ? Colors.green : Colors.red, size: 18),
+//           ),
+//           title: Text(item['location'] ?? 'Unknown', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+//           subtitle: Text(item['journey_time'] ?? '', style: const TextStyle(fontSize: 11)),
+//           trailing: Container(
+//             padding: const EdgeInsets.all(4),
+//             decoration: BoxDecoration(color: Colors.grey[200], borderRadius: BorderRadius.circular(4)),
+//             child: Text(item['action'] ?? '', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+//           ),
+//         );
+//       },
+//     );
+//   }
+//
+//   Widget _buildBottomBar(BuildContext context, JourneyProviderView journey, AuthProvider auth) {
+//     return Padding(
+//       padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+//       child: SizedBox(
+//         width: double.infinity,
+//         height: 56,
+//         child: ElevatedButton.icon(
+//           onPressed: journey.isSaving
+//               ? null
+//               : () => journey.handleCheckInOut(auth.sessionCookie!, auth.user!.uid),
+//           icon: Icon(journey.isCheckedIn ? Icons.logout : Icons.login),
+//           label: Text(
+//             journey.isCheckedIn ? "CHECK OUT" : "CHECK IN",
+//             style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+//           ),
+//           style: ElevatedButton.styleFrom(
+//             backgroundColor: journey.isCheckedIn ? Colors.redAccent : Colors.indigo,
+//             foregroundColor: Colors.white,
+//             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+//           ),
+//         ),
+//       ),
+//     );
+//   }
+// }
+
 class JourneyScreen extends StatelessWidget {
   const JourneyScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // Read auth once
     final auth = context.read<AuthProvider>();
-    // Watch journey for UI updates
     final journey = context.watch<JourneyProviderView>();
 
-    // Safety check: trigger fetch only if not already done
+    final w = MediaQuery.of(context).size.width;
+    final isSmall = w < 360;
+    final isTablet = w >= 600;
+
+    final padding = isSmall ? 12.0 : 16.0;
+    final titleFont = isSmall ? 14.0 : (isTablet ? 18.0 : 16.0);
+
     if (!journey.isSaving && journey.historyRows.isEmpty) {
       Future.microtask(() =>
-          journey.init(auth.sessionCookie!, auth.user!.uid)
-      );
+          journey.init(auth.sessionCookie!, auth.user!.uid));
     }
 
     return Scaffold(
@@ -242,71 +446,87 @@ class JourneyScreen extends StatelessWidget {
             Expanded(
               child: RefreshIndicator(
                 onRefresh: () => journey.fetchHistory(auth.sessionCookie!, auth.user!.uid),
-                child: SingleChildScrollView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    children: [
-                      _buildStatusCard(journey),
-                      const SizedBox(height: 12),
-                      Text(
-                        journey.locationStatus,
-                        style: const TextStyle(fontStyle: FontStyle.italic, color: Colors.grey, fontSize: 12),
+                child: ListView(
+                  padding: EdgeInsets.all(padding),
+                  children: [
+                    _buildStatusCard(journey, isSmall),
+                    const SizedBox(height: 12),
+
+                    Text(
+                      journey.locationStatus,
+                      style: TextStyle(
+                        fontStyle: FontStyle.italic,
+                        color: Colors.grey,
+                        fontSize: isSmall ? 11 : 12,
                       ),
-                      const SizedBox(height: 20),
-                      const Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text("History Logs", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    ),
+
+                    const SizedBox(height: 18),
+
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        "History Logs",
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: titleFont,
+                        ),
                       ),
-                      const Divider(),
-                      _buildHistoryList(journey),
-                    ],
-                  ),
+                    ),
+                    const Divider(),
+
+                    _buildHistoryList(journey, isSmall),
+                  ],
                 ),
               ),
             ),
 
-            // Map Button
+            // MAP BUTTON
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              padding: EdgeInsets.symmetric(horizontal: padding),
               child: SizedBox(
                 width: double.infinity,
                 child: OutlinedButton.icon(
-                  onPressed: journey.historyRows.isEmpty ? null : () {
+                  onPressed: journey.historyRows.isEmpty
+                      ? null
+                      : () {
                     final data = journey.buildMapDataFromHistory();
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => JourneyMapScreen(data: data)),
+                      MaterialPageRoute(
+                          builder: (_) => JourneyMapScreen(data: data)),
                     );
                   },
                   icon: const Icon(Icons.map_outlined),
                   label: const Text("VIEW MAP"),
                   style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    padding: EdgeInsets.symmetric(vertical: isSmall ? 12 : 14),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
                   ),
                 ),
               ),
             ),
-            const SizedBox(height: 10),
-            _buildBottomBar(context, journey, auth),
+
+            const SizedBox(height: 8),
+            _buildBottomBar(context, journey, auth, isSmall),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildStatusCard(JourneyProviderView journey) {
+  Widget _buildStatusCard(JourneyProviderView journey, bool isSmall) {
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(isSmall ? 12 : 16),
         child: Column(
           children: [
-            _row(Icons.play_arrow, Colors.green, "Started at:", journey.startAddress),
+            _row(Icons.play_arrow, Colors.green, "Started at:", journey.startAddress, isSmall),
             const Divider(height: 24),
-            _row(Icons.stop, Colors.red, "Ended at:", journey.endAddress),
+            _row(Icons.stop, Colors.red, "Ended at:", journey.endAddress, isSmall),
             if (journey.isSaving)
               const Padding(
                 padding: EdgeInsets.only(top: 12.0),
@@ -318,20 +538,24 @@ class JourneyScreen extends StatelessWidget {
     );
   }
 
-  Widget _row(IconData icon, Color color, String label, String? value) {
+  Widget _row(
+      IconData icon, Color color, String label, String? value, bool isSmall) {
     return Row(
       children: [
-        Icon(icon, color: color, size: 28),
+        Icon(icon, color: color, size: isSmall ? 24 : 28),
         const SizedBox(width: 12),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(label, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+              Text(label,
+                  style: TextStyle(fontSize: isSmall ? 10 : 11, color: Colors.grey)),
               Text(
                 value ?? "Not recorded",
-                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-                maxLines: 1,
+                style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: isSmall ? 13 : 14),
+                maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
             ],
@@ -341,13 +565,14 @@ class JourneyScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildHistoryList(JourneyProviderView journey) {
+  Widget _buildHistoryList(JourneyProviderView journey, bool isSmall) {
     if (journey.historyRows.isEmpty && !journey.isSaving) {
       return const Padding(
         padding: EdgeInsets.all(20.0),
         child: Text("No activity yet"),
       );
     }
+
     return ListView.separated(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -356,31 +581,73 @@ class JourneyScreen extends StatelessWidget {
       itemBuilder: (context, index) {
         final item = journey.historyRows[index];
         final isCheckIn = item['action'].toString().contains('IN');
-        return ListTile(
-          contentPadding: EdgeInsets.zero,
-          leading: CircleAvatar(
-            backgroundColor: isCheckIn ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
-            child: Icon(isCheckIn ? Icons.login : Icons.logout,
-                color: isCheckIn ? Colors.green : Colors.red, size: 18),
-          ),
-          title: Text(item['location'] ?? 'Unknown', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
-          subtitle: Text(item['journey_time'] ?? '', style: const TextStyle(fontSize: 11)),
-          trailing: Container(
-            padding: const EdgeInsets.all(4),
-            decoration: BoxDecoration(color: Colors.grey[200], borderRadius: BorderRadius.circular(4)),
-            child: Text(item['action'] ?? '', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+
+        return Padding(
+          padding: EdgeInsets.symmetric(vertical: isSmall ? 6 : 8),
+          child: Row(
+            children: [
+              CircleAvatar(
+                radius: isSmall ? 16 : 18,
+                backgroundColor:
+                isCheckIn ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
+                child: Icon(
+                  isCheckIn ? Icons.login : Icons.logout,
+                  color: isCheckIn ? Colors.green : Colors.red,
+                  size: isSmall ? 16 : 18,
+                ),
+              ),
+              const SizedBox(width: 10),
+
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item['location'] ?? 'Unknown',
+                      style: TextStyle(
+                        fontSize: isSmall ? 12 : 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    Text(
+                      item['journey_time'] ?? '',
+                      style: TextStyle(fontSize: isSmall ? 10 : 11),
+                    ),
+                  ],
+                ),
+              ),
+
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.grey[200],
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  item['action'] ?? '',
+                  style: TextStyle(
+                      fontSize: isSmall ? 9 : 10,
+                      fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
           ),
         );
       },
     );
   }
 
-  Widget _buildBottomBar(BuildContext context, JourneyProviderView journey, AuthProvider auth) {
+  Widget _buildBottomBar(
+      BuildContext context,
+      JourneyProviderView journey,
+      AuthProvider auth,
+      bool isSmall,
+      ) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      padding: EdgeInsets.fromLTRB(16, 0, 16, isSmall ? 12 : 16),
       child: SizedBox(
         width: double.infinity,
-        height: 56,
+        height: isSmall ? 50 : 56,
         child: ElevatedButton.icon(
           onPressed: journey.isSaving
               ? null
@@ -388,12 +655,17 @@ class JourneyScreen extends StatelessWidget {
           icon: Icon(journey.isCheckedIn ? Icons.logout : Icons.login),
           label: Text(
             journey.isCheckedIn ? "CHECK OUT" : "CHECK IN",
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              fontSize: isSmall ? 14 : 16,
+              fontWeight: FontWeight.bold,
+            ),
           ),
           style: ElevatedButton.styleFrom(
-            backgroundColor: journey.isCheckedIn ? Colors.redAccent : Colors.indigo,
+            backgroundColor:
+            journey.isCheckedIn ? Colors.redAccent : Colors.indigo,
             foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12)),
           ),
         ),
       ),

@@ -1,74 +1,4 @@
-// import 'dart:convert';
-// import 'package:flutter/cupertino.dart';
-// import 'package:http/http.dart' as http;
-// import '../model/employee_model.dart';
-// import 'auth_provider.dart';
-//
-// class EmployeeProvider extends ChangeNotifier {
-//   final AuthProvider? auth;
-//   EmployeeProvider(this.auth);
-//
-//   EmployeeResponse? _profile;
-//   bool _isLoading = false;
-//   String? _error;
-//
-//   EmployeeResponse? get profile => _profile;
-//   bool get isLoading => _isLoading;
-//   String? get error => _error;
-//
-//   Future<void> loadProfile() async {
-//     if (auth?.sessionCookie == null) {
-//       _error = 'No session cookie found';
-//       notifyListeners();
-//       return;
-//     }
-//
-//     _isLoading = true;
-//     _error = null;
-//     notifyListeners();
-//
-//     try {
-//       final url = Uri.parse('https://demo.kendroo.com/api/my/employee');
-//       final res = await http.post(
-//         url,
-//         headers: {
-//           'Content-Type': 'application/json',
-//           'Cookie': auth!.sessionCookie!,
-//         },
-//         body: jsonEncode({
-//           "jsonrpc": "2.0",
-//           "method": "call",
-//           "params": {},
-//           "id": null,
-//         }),
-//       );
-//
-//       debugPrint('➡️ [Employee] POST $url');
-//       debugPrint('➡️ [Employee] Cookie: ${auth!.sessionCookie}');
-//       debugPrint('⬅️ [Employee] Response: ${res.statusCode} ${res.body}');
-//
-//       if (res.statusCode == 200) {
-//         final data = jsonDecode(res.body);
-//         _profile = EmployeeResponse.fromJson(data);
-//       } else {
-//         throw Exception('HTTP ${res.statusCode}: ${res.body}');
-//       }
-//     } catch (e, st) {
-//       debugPrint('❌ [EmployeeProvider] Error: $e\n$st');
-//       _error = 'Exception: $e';
-//     } finally {
-//       _isLoading = false;
-//       notifyListeners();
-//     }
-//   }
-//
-//
-//
-//
-// }
 
-
-// employee_provider.dart
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
@@ -76,7 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
 import '../model/employee_model.dart';
-import 'auth_provider.dart'; // adjust path to your AuthProvider
+import '../repo/odoo_json_rpc.dart';
+import 'auth_provider.dart';
 
 class EmployeeProvider extends ChangeNotifier {
   final AuthProvider? auth;
@@ -168,3 +99,5 @@ class EmployeeProvider extends ChangeNotifier {
     }
   }
 }
+
+

@@ -121,8 +121,6 @@ class OdooSessionRpc {
   }
 
 
-
-
   String _toOdooDatetime(DateTime dt) {
     final u = dt.toUtc();
     String two(int n) => n.toString().padLeft(2, '0');
@@ -195,6 +193,92 @@ class OdooSessionRpc {
   }
 
 
+
+  // Future<int> checkInCreateOrUpdate({
+  //   required int uid,
+  //   required String startLocation,
+  //   required double latitude,
+  //   required double longitude,
+  //   DateTime? journeyTime,
+  // }) async {
+  //   final employeeId = await getEmployeeId(uid);
+  //
+  //   final open = await callKw(
+  //     model: "kio.field.force",
+  //     method: "search_read",
+  //     args: [
+  //       [
+  //         ["employee_id", "=", employeeId],
+  //
+  //       ]
+  //     ],
+  //     kwargs: {
+  //       "fields": ["id", "start_location", "check_in_time", "end_location"],
+  //       "order": "id desc",
+  //       "limit": 1
+  //     },
+  //   );
+  //
+  //
+  //
+  //   final now = _toOdooDatetime(journeyTime ?? DateTime.now());
+  //
+  //   int fieldForceId;
+  //
+  //   if ((open as List).isEmpty) {
+  //
+  //
+  //
+  //     final newId = await callKw(
+  //       model: "kio.field.force",
+  //       method: "create",
+  //       args: [
+  //         {
+  //           "employee_id": employeeId,
+  //           "start_location": startLocation,
+  //           "check_in_time": now,
+  //         }
+  //       ],
+  //     );
+  //     fieldForceId = newId as int;
+  //
+  //
+  //   } else {
+  //
+  //       fieldForceId = open[0]["id"] as int;
+  //
+  //       final existingStart = open[0]["start_location"];
+  //       final existingCheckIn = open[0]["check_in_time"];
+  //
+  //       final valsToWrite = <String, dynamic>{};
+  //
+  //       final isEmptyStart = (existingStart == false ||
+  //           existingStart == null ||
+  //           (existingStart is String && existingStart
+  //               .trim()
+  //               .isEmpty));
+  //       final isEmptyCheckIn = (existingCheckIn == false ||
+  //           existingCheckIn == null);
+  //
+  //       if (isEmptyStart) valsToWrite["start_location"] = startLocation;
+  //       if (isEmptyCheckIn) valsToWrite["check_in_time"] = now;
+  //
+  //
+  //
+  //   }
+  //
+  //
+  //   await addJourneyHistoryLine(
+  //     fieldForceId: fieldForceId,
+  //     latitude: latitude,
+  //     longitude: longitude,
+  //     location: startLocation,
+  //     journeyTime: journeyTime,
+  //   );
+  //
+  //   return fieldForceId;
+  // }
+
   Future<int> checkInCreateOrUpdate({
     required int uid,
     required String startLocation,
@@ -220,11 +304,15 @@ class OdooSessionRpc {
       },
     );
 
+
+
     final now = _toOdooDatetime(journeyTime ?? DateTime.now());
 
     int fieldForceId;
 
-    if ((open as List).isEmpty) {
+
+
+
 
       final newId = await callKw(
         model: "kio.field.force",
@@ -238,46 +326,19 @@ class OdooSessionRpc {
         ],
       );
       fieldForceId = newId as int;
-    } else {
-      fieldForceId = open[0]["id"] as int;
-
-      final existingStart = open[0]["start_location"];
-      final existingCheckIn = open[0]["check_in_time"];
-
-      final valsToWrite = <String, dynamic>{};
-
-      final isEmptyStart = (existingStart == false ||
-          existingStart == null ||
-          (existingStart is String && existingStart.trim().isEmpty));
-      final isEmptyCheckIn = (existingCheckIn == false || existingCheckIn == null);
-
-      if (isEmptyStart) valsToWrite["start_location"] = startLocation;
-      if (isEmptyCheckIn) valsToWrite["check_in_time"] = now;
-
-      // if (valsToWrite.isNotEmpty) {
-      //   await callKw(
-      //     model: "kio.field.force",
-      //     method: "write",
-      //     args: [
-      //       [fieldForceId],
-      //       valsToWrite,
-      //     ],
-      //   );
-      // }
-    }
 
 
-    await addJourneyHistoryLine(
-      fieldForceId: fieldForceId,
-      latitude: latitude,
-      longitude: longitude,
-      location: startLocation,
-      journeyTime: journeyTime,
-    );
+
+      await addJourneyHistoryLine(
+        fieldForceId: fieldForceId,
+        latitude: latitude,
+        longitude: longitude,
+        location: startLocation,
+        journeyTime: journeyTime,
+      );
 
     return fieldForceId;
   }
-
 
   Future<void> fieldForceCheckOut({
     required int uid,
@@ -313,25 +374,7 @@ class OdooSessionRpc {
     final id = open[0]["id"] as int;
     final now = _toOdooDatetime(journeyTime ?? DateTime.now());
 
-    // await callKw(
-    //   model: "kio.field.force",
-    //   method: "write",
-    //   args: [
-    //     [id],
-    //     {
-    //       "end_location": endLocation,
-    //       "check_out_time": now,
-    //     },
-    //   ],
-    // );
 
-    // await addJourneyHistoryLine(
-    //   fieldForceId: id,
-    //   latitude: latitude,
-    //   longitude: longitude,
-    //   location: endLocation,
-    //   journeyTime: journeyTime,
-    // );
   }
 
 
@@ -364,6 +407,34 @@ class OdooSessionRpc {
         "offset": offset,
       },
     );
+    return (result as List).cast<Map<String, dynamic>>();
+  }
+
+  Future<List<Map<String, dynamic>>> searchRead({
+    required String model,
+    List<dynamic> domain = const [],
+    required List<String> fields,
+    int limit = 0, // 0 means no limit in Odoo
+    int offset = 0,
+    String? order,
+    Map<String, dynamic>? context,
+  }) async {
+    final kwargs = <String, dynamic>{
+      "fields": fields,
+      "offset": offset,
+    };
+
+    if (limit > 0) kwargs["limit"] = limit;
+    if (order != null && order.trim().isNotEmpty) kwargs["order"] = order;
+    if (context != null && context.isNotEmpty) kwargs["context"] = context;
+
+    final result = await callKw(
+      model: model,
+      method: "search_read",
+      args: [domain],
+      kwargs: kwargs,
+    );
+
     return (result as List).cast<Map<String, dynamic>>();
   }
 
