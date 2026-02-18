@@ -1,6 +1,6 @@
 import 'dart:convert';
-
 import 'package:http/http.dart' as http;
+
 
 class OdooSessionRpc {
   final String baseUrl;
@@ -38,7 +38,7 @@ class OdooSessionRpc {
         "Cookie": sessionCookie,
       },
       body: jsonEncode(payload),
-    );
+    ).timeout(const Duration(seconds: 40));
 
     final data = jsonDecode(res.body);
 
@@ -49,7 +49,19 @@ class OdooSessionRpc {
 
     return data["result"];
   }
+  Future<int> getLatestFieldForceIdForUser(int uid) async {
+    final employeeId = await getEmployeeId(uid);
 
+    final rows = await callKw(
+      model: "kio.field.force",
+      method: "search_read",
+      args: [[["employee_id", "=", employeeId]]],
+      kwargs: {"fields": ["id"], "order": "id desc", "limit": 1},
+    );
+
+    if ((rows as List).isEmpty) throw Exception("No field force record found");
+    return rows[0]["id"] as int;
+  }
 
   Future<List<Map<String, dynamic>>> fetchJourneyHistory({
     required int fieldForceId,
@@ -84,6 +96,39 @@ class OdooSessionRpc {
 
     return (result as List).cast<Map<String, dynamic>>();
   }
+
+
+  Future<DateTime?> fetchCheckInTime({
+    required String cookie,
+    required int uid,
+  }) async {
+    final rpc = OdooSessionRpc(
+      baseUrl: baseUrl,
+      sessionCookie: cookie,
+    );
+
+    final rows = await rpc.callKw(
+      model: "kio.field.force",
+      method: "search_read",
+      args: [],
+      kwargs: {
+        "domain": [
+          ["employee_id.user_id", "=", uid],
+        ],
+        "fields": ["check_in_time"],
+        "limit": 1,
+        "order": "id desc"
+      },
+    );
+
+    if (rows.isEmpty) return null;
+
+    final timeStr = rows[0]["check_in_time"];
+    if (timeStr == null) return null;
+
+    return DateTime.tryParse(timeStr.replaceFirst(' ', 'T'));
+  }
+
 
   Future<List<Map<String, dynamic>>> fetchLatestJourneyHistoryForUser({
     required int uid,
@@ -121,6 +166,7 @@ class OdooSessionRpc {
   }
 
 
+
   String _toOdooDatetime(DateTime dt) {
     final u = dt.toUtc();
     String two(int n) => n.toString().padLeft(2, '0');
@@ -144,7 +190,6 @@ class OdooSessionRpc {
     }
     return result[0]["id"] as int;
   }
-
 
   Future<int> _getOpenJourneyId(int employeeId) async {
     final open = await callKw(
@@ -191,8 +236,6 @@ class OdooSessionRpc {
 
     return lineId as int;
   }
-
-
 
   // Future<int> checkInCreateOrUpdate({
   //   required int uid,
@@ -304,41 +347,34 @@ class OdooSessionRpc {
       },
     );
 
-
-
     final now = _toOdooDatetime(journeyTime ?? DateTime.now());
 
     int fieldForceId;
 
+    final newId = await callKw(
+      model: "kio.field.force",
+      method: "create",
+      args: [
+        {
+          "employee_id": employeeId,
+          "start_location": startLocation,
+          "check_in_time": now,
+        }
+      ],
+    );
+    fieldForceId = newId as int;
 
-
-
-
-      final newId = await callKw(
-        model: "kio.field.force",
-        method: "create",
-        args: [
-          {
-            "employee_id": employeeId,
-            "start_location": startLocation,
-            "check_in_time": now,
-          }
-        ],
-      );
-      fieldForceId = newId as int;
-
-
-
-      await addJourneyHistoryLine(
-        fieldForceId: fieldForceId,
-        latitude: latitude,
-        longitude: longitude,
-        location: startLocation,
-        journeyTime: journeyTime,
-      );
+    await addJourneyHistoryLine(
+      fieldForceId: fieldForceId,
+      latitude: latitude,
+      longitude: longitude,
+      location: startLocation,
+      journeyTime: journeyTime,
+    );
 
     return fieldForceId;
   }
+
 
   Future<void> fieldForceCheckOut({
     required int uid,
@@ -349,7 +385,8 @@ class OdooSessionRpc {
   }) async {
     final employeeId = await getEmployeeId(uid);
 
-    final open = await callKw(
+    final open =
+    await callKw(
       model: "kio.field.force",
       method: "search_read",
       args: [
@@ -377,19 +414,18 @@ class OdooSessionRpc {
 
   }
 
-
-  Future<void> deleteOpenJourney(int uid) async {
-    final employeeId = await getEmployeeId(uid);
-    final id = await _getOpenJourneyId(employeeId);
-
-    await callKw(
-      model: "kio.field.force",
-      method: "unlink",
-      args: [
-        [id]
-      ],
-    );
-  }
+  // Future<void> deleteOpenJourney(int uid) async {
+  //   final employeeId = await getEmployeeId(uid);
+  //   final id = await _getOpenJourneyId(employeeId);
+  //
+  //   await callKw(
+  //     model: "kio.field.force",
+  //     method: "unlink",
+  //     args: [
+  //       [id]
+  //     ],
+  //   );
+  // }
 
   Future<List<Map<String, dynamic>>> fetchEmployeeData({
     required List<dynamic> domain,
@@ -414,7 +450,7 @@ class OdooSessionRpc {
     required String model,
     List<dynamic> domain = const [],
     required List<String> fields,
-    int limit = 0, // 0 means no limit in Odoo
+    int limit = 0,
     int offset = 0,
     String? order,
     Map<String, dynamic>? context,
@@ -439,3 +475,4 @@ class OdooSessionRpc {
   }
 
 }
+

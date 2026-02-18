@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../provider/auth_provider.dart';
-import 'dashboard.dart';
+
+import 'journey_screen.dart';
 
 
 class OdooLoginPage extends StatefulWidget {
@@ -33,7 +34,7 @@ class _OdooLoginPageState extends State<OdooLoginPage> {
     //final auth = Provider.of<AuthProvider>(context, listen: false);
     final auth = context.watch<AuthProvider>();
     if (auth.user != null) {
-      return const DashboardScreen();
+      return  JourneyScreen();
     }
 
     if (auth.isLoading) {
@@ -105,6 +106,45 @@ class _OdooLoginPageState extends State<OdooLoginPage> {
                   child: FilledButton(
                     style: FilledButton.styleFrom(
                         backgroundColor: Colors.blueAccent),
+                    // onPressed: auth.isLoading
+                    //     ? null
+                    //     : () async {
+                    //   try {
+                    //     await auth.login(
+                    //       _dbCtrl.text.trim(),
+                    //       _emailCtrl.text.trim(),
+                    //       _passCtrl.text,
+                    //     );
+                    //
+                    //     if (!mounted) return;
+                    //
+                    //     if (auth.sessionCookie != null ) {
+                    //       ScaffoldMessenger.of(context).showSnackBar(
+                    //         SnackBar(
+                    //           content: Text(
+                    //             'Welcome ${auth.user!.name} (${auth.user!
+                    //                 .companyName})',
+                    //           ),
+                    //           duration: const Duration(seconds: 2),
+                    //         ),
+                    //       );
+                    //       await Future.delayed(
+                    //           const Duration(milliseconds: 800));
+                    //       if (!mounted) return;
+                    //       Navigator.pushReplacement(
+                    //         context,
+                    //         MaterialPageRoute(
+                    //           builder: (_) => const DashboardScreen(),
+                    //         ),
+                    //       );
+                    //     }
+                    //   } catch (e) {
+                    //     if (!mounted) return;
+                    //     ScaffoldMessenger.of(context).showSnackBar(
+                    //       SnackBar(content: Text('Login failed: $e')),
+                    //     );
+                    //   }
+                    // },
                     onPressed: auth.isLoading
                         ? null
                         : () async {
@@ -117,26 +157,22 @@ class _OdooLoginPageState extends State<OdooLoginPage> {
 
                         if (!mounted) return;
 
-                        if (auth.user != null) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                'Welcome ${auth.user!.name} (${auth.user!
-                                    .companyName})',
-                              ),
-                              duration: const Duration(seconds: 2),
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              'Welcome ${auth.user!.name} (${auth.user!.companyName})',
                             ),
-                          );
-                          await Future.delayed(
-                              const Duration(milliseconds: 800));
-                          if (!mounted) return;
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const DashboardScreen(),
-                            ),
-                          );
-                        }
+                            duration: const Duration(seconds: 2),
+                          ),
+                        );
+
+                        await Future.delayed(const Duration(milliseconds: 800));
+                        if (!mounted) return;
+
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(builder: (_) => JourneyScreen()),
+                        );
                       } catch (e) {
                         if (!mounted) return;
                         ScaffoldMessenger.of(context).showSnackBar(

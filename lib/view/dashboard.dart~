@@ -764,7 +764,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             onTap: () {
                               Navigator.of(context).push(
                                 MaterialPageRoute(
-                                  builder: (_) =>  JourneyScreen(),
+                                  builder: (_) => const JourneyScreen(),
                                 ),
                               );
                             },

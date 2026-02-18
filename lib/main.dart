@@ -37,6 +37,7 @@ import 'package:provider/provider.dart';
 
 
 Future<void> main() async {
+  String url = "https://demo.kendroo.com";
   WidgetsFlutterBinding.ensureInitialized();
   FlutterForegroundTask.init(
     androidNotificationOptions: AndroidNotificationOptions(
@@ -64,7 +65,8 @@ Future<void> main() async {
     ),
   );
 
-
+  final journey = JourneyProviderView();
+  await journey.restoreFromCache();
   runApp(
       MultiProvider(
         providers: [
@@ -79,12 +81,12 @@ Future<void> main() async {
           ),
           ChangeNotifierProxyProvider<AuthProvider, JourneyProvider>(
             create: (context) => JourneyProvider(
-              repository: FieldForceRepository(baseUrl:'https://demo.kendroo.com', sessionCookie: ''),
+              repository: FieldForceRepository(baseUrl:url, sessionCookie: ''),
               authToken: "", // Initial empty token
             ),
             update: (context, auth, previous) => JourneyProvider(
               repository: FieldForceRepository(
-                baseUrl: 'https://demo.kendroo.com',
+                baseUrl: url,
                 sessionCookie: auth.sessionCookie ?? '',
               ),
               authToken: auth.sessionCookie ?? "",
@@ -92,61 +94,61 @@ Future<void> main() async {
           ),
           ChangeNotifierProxyProvider<AuthProvider, AllEmployeeProvider>(
             create: (_) => AllEmployeeProvider(
-              AllEmployeeRepository(baseUrl: 'https://demo.kendroo.com', sessionCookie: ''),
+              AllEmployeeRepository(baseUrl: url, sessionCookie: ''),
             ),
             update: (_, auth, provider) =>
                 AllEmployeeProvider(AllEmployeeRepository(
-                  baseUrl: 'https://demo.kendroo.com',
+                  baseUrl: url,
                   sessionCookie: auth.sessionCookie ?? '',
                 )),
           ),
           ChangeNotifierProxyProvider<AuthProvider, AttendanceProvider>(
             create: (_) => AttendanceProvider(
-              AttendanceRepository(baseUrl: 'https://demo.kendroo.io', sessionCookie: ''),
+              AttendanceRepository(baseUrl: url, sessionCookie: ''),
             ),
             update: (_, auth, provider) =>
                 AttendanceProvider(AttendanceRepository(
-                  baseUrl: 'https://demo.kendroo.io',
+                  baseUrl:url,
                   sessionCookie: auth.sessionCookie ?? '',
                 )),
           ),
           ChangeNotifierProxyProvider<AuthProvider, ChatProvider>(
             create: (_) => ChatProvider(
-              MemoryChatRepository(baseUrl: 'https://demo.kendroo.io', sessionCookie: ''),
+              MemoryChatRepository(baseUrl:url, sessionCookie: ''),
             ),
             update: (_, auth, provider) =>
                 ChatProvider(MemoryChatRepository(
-                  baseUrl: 'https://demo.kendroo.io',
+                  baseUrl:url,
                   sessionCookie: auth.sessionCookie ?? '',
                 )),
           ),
           ChangeNotifierProxyProvider<AuthProvider, ProductProvider>(
             create: (_) => ProductProvider(
-              ProductRepository(baseUrl: 'https://demo.kendroo.com', sessionCookie: ''),
+              ProductRepository(baseUrl:url, sessionCookie: ''),
             ),
             update: (_, auth, provider) =>
                 ProductProvider(ProductRepository(
-                  baseUrl: 'https://demo.kendroo.com',
+                  baseUrl:url,
                   sessionCookie: auth.sessionCookie ?? '',
                 )),
           ),
           ChangeNotifierProxyProvider<AuthProvider, CustomerProvider>(
             create: (_) => CustomerProvider(
-              CustomerRepository(baseUrl: 'https://demo.kendroo.com', sessionCookie: ''),
+              CustomerRepository(baseUrl:url, sessionCookie: ''),
             ),
             update: (_, auth, provider) =>
                 CustomerProvider(CustomerRepository(
-                  baseUrl: 'https://demo.kendroo.com',
+                  baseUrl:url,
                   sessionCookie: auth.sessionCookie ?? '',
                 )),
           ),
           ChangeNotifierProxyProvider<AuthProvider, LeaveProvider>(
             create: (_) => LeaveProvider(
-              LeaveRepository(baseUrl: 'https://demo.kendroo.com', sessionCookie: ''),
+              LeaveRepository(baseUrl:url, sessionCookie: ''),
             ),
             update: (_, auth, provider) =>
                 LeaveProvider(LeaveRepository(
-                  baseUrl: 'https://demo.kendroo.com',
+                  baseUrl:url,
                   sessionCookie: auth.sessionCookie ?? '',
                 )),
           ),
@@ -156,7 +158,7 @@ Future<void> main() async {
             ),
             update: (_, auth, previous) => TaskProvider(
               repository: TaskRepository(
-                baseUrl: 'https://demo.kendroo.com',
+                baseUrl:url,
                 sessionCookie: auth.sessionCookie ?? "",
               ),
             ),
@@ -167,7 +169,7 @@ Future<void> main() async {
             ),
             update: (_, auth, previous) => ProjectProvider(
               repository: ProjectRepository(
-                baseUrl: 'https://demo.kendroo.com',
+                baseUrl:url,
                 sessionCookie: auth.sessionCookie ?? "",
               ),
             ),
@@ -175,6 +177,7 @@ Future<void> main() async {
   ChangeNotifierProvider(create: (_) => JourneyProviderView()),
           ChangeNotifierProvider(create: (_) => EmployeeProviderView()),
           ChangeNotifierProvider(create: (_) => EmployeeProfileProvider()),
+          ChangeNotifierProvider(create: (_) => journey),
         ],
         child: const MyApp(), )
      );

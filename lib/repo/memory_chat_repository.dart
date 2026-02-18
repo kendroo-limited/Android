@@ -578,7 +578,6 @@ import '../model/user_model.dart';
 import 'chat_repository.dart';
 
 class MemoryChatRepository implements IChatRepository {
-
   final String baseUrl;
   final String sessionCookie;
   final Duration httpTimeout;
@@ -746,7 +745,7 @@ class MemoryChatRepository implements IChatRepository {
           int.tryParse("${ch['message_unread_counter'] ?? 0}") ?? 0;
 
       final peer = OdooUser(
-        uid: id, // you can later map this to real user/partner
+        uid: id,
         name: name,
         username: '',
         db: '',
@@ -931,7 +930,7 @@ class MemoryChatRepository implements IChatRepository {
       if (res.statusCode != 200 || !ct.contains('application/json') || looksHtml) {
         _printPreview(res.body);
         print('! Non-JSON or error response. Falling back to Odoo JSON-RPC inbox.');
-        return await _fetchInboxFromOdoo();     // ← THIS
+        return await _fetchInboxFromOdoo();
       }
 
       Map<String, dynamic> parsed;
@@ -1151,7 +1150,6 @@ class MemoryChatRepository implements IChatRepository {
         return await _fetchMessagesFromOdoo(conversationId, peer);
       }
 
-      // Expected: { "result": { "messages": [...] } }
       final result = (parsed['result'] ?? {}) as Map<String, dynamic>;
       final list = (result['messages'] ?? []) as List;
 
@@ -1188,8 +1186,8 @@ class MemoryChatRepository implements IChatRepository {
           "method": "channel_fetch_message",
           "args": [
             [channelId],
-            0, // last_id
-            40 // limit
+            0,
+            40
           ],
           "kwargs": {},
         }
@@ -1225,7 +1223,7 @@ class MemoryChatRepository implements IChatRepository {
         if (idInt > lastMsgId) lastMsgId = idInt;
       }
 
-      // Mark channel as seen via write (last_seen_message_id)
+
       if (lastMsgId > 0) {
         await _markChannelSeen(channelId, lastMsgId);
       }
@@ -1267,7 +1265,6 @@ class MemoryChatRepository implements IChatRepository {
   }
 
   int _extractChannelId(String conversationId) {
-    // Handles "16" or "discuss.channel_16"
     final digits = RegExp(r'(\d+)$').firstMatch(conversationId);
     if (digits == null) return int.tryParse(conversationId) ?? 0;
     return int.tryParse(digits.group(1)!) ?? 0;

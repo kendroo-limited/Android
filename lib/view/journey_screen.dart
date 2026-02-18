@@ -1,60 +1,187 @@
 import 'dart:async';
+import 'dart:math';
+
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart' as ll;
 import 'package:location/location.dart' as loc;
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../model/journey_model.dart';
 import '../provider/auth_provider.dart';
 import '../repo/odoo_json_rpc.dart';
 import '../services/background_journey_service.dart';
+import 'employee/all_employee_page.dart';
+import 'employee_profile_page.dart';
 import 'journey_map_screen.dart';
 
+
+// class CheckinCache {
+//   static const _kIsCheckedIn = "isCheckedIn";
+//   static const _kStartAddress = "startAddress";
+//   static const _kCheckInTime = "checkInTime";
+//   static const _kFieldForceId = "fieldForceId";
+//
+//   static Future<void> save({
+//     required bool isCheckedIn,
+//     String? startAddress,
+//     String? checkInTime,
+//     int? fieldForceId,
+//   }) async {
+//     final sp = await SharedPreferences.getInstance();
+//     await sp.setBool(_kIsCheckedIn, isCheckedIn);
+//     await sp.setString(_kStartAddress, startAddress ?? "");
+//     await sp.setString(_kCheckInTime, checkInTime ?? "");
+//     if (fieldForceId != null) {
+//       await sp.setInt(_kFieldForceId, fieldForceId);
+//     } else {
+//       await sp.remove(_kFieldForceId);
+//     }
+//   }
+//
+//   static Future<Map<String, dynamic>> load() async {
+//     final sp = await SharedPreferences.getInstance();
+//     return {
+//       "isCheckedIn": sp.getBool(_kIsCheckedIn) ?? false,
+//       "startAddress": sp.getString(_kStartAddress) ?? "",
+//       "checkInTime": sp.getString(_kCheckInTime) ?? "",
+//       "fieldForceId": sp.getInt(_kFieldForceId),
+//     };
+//   }
+//
+// // static Future<void> clear() async {
+// //   final sp = await SharedPreferences.getInstance();
+// //   await sp.remove(_kIsCheckedIn);
+// //   await sp.remove(_kStartAddress);
+// //   await sp.remove(_kCheckInTime);
+// //   await sp.remove(_kFieldForceId);
+// // }
+// }
+
+
+
+class CheckinCache {
+  static const String _key = "checkin_data";
+
+  static Future<void> save({
+    required bool isCheckedIn,
+    String? startAddress,
+    String? checkInTime,
+    int? fieldForceId,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('isCheckedIn', isCheckedIn);
+    await prefs.setString('startAddress', startAddress ?? "");
+    await prefs.setString('checkInTime', checkInTime ?? "");
+    await prefs.setInt('fieldForceId', fieldForceId ?? -1);
+  }
+
+  static Future<Map<String, dynamic>> load() async {
+    final prefs = await SharedPreferences.getInstance();
+    return {
+      "isCheckedIn": prefs.getBool('isCheckedIn') ?? false,
+      "startAddress": prefs.getString('startAddress') ?? "",
+      "checkInTime": prefs.getString('checkInTime') ?? "",
+      "fieldForceId": prefs.getInt('fieldForceId') == -1 ? null : prefs.getInt('fieldForceId'),
+    };
+  }
+}
 class JourneyProviderView extends ChangeNotifier {
   final loc.Location _location = loc.Location();
 
   bool isCheckedIn = false;
   String? startAddress;
   String? endAddress;
+
+  bool _restored = false;
+  bool _hasFetchedInitial = false;
+
   Timer? _autoTimer;
   List<Map<String, dynamic>> historyRows = [];
   String locationStatus = 'Ready';
   bool isSaving = false;
-  bool _hasFetchedInitial = false;
+
   int? _currentFieldForceId;
   bool _sessionClosed = false;
+  bool isHydrating = true;
   OdooSessionRpc _rpc(String cookie) {
     return OdooSessionRpc(
       baseUrl: "https://demo.kendroo.com",
       sessionCookie: cookie,
     );
   }
+  bool _initScheduled = false;
 
-  void init(String cookie, int uid) {
-    if (_hasFetchedInitial || isSaving) return;
+  void scheduleInit(String cookie, int uid) {
+    if (_initScheduled) return;
+    _initScheduled = true;
+    Future.microtask(() => init(cookie, uid));
+  }
+
+  Future<void> init(String cookie, int uid) async {
+    if (_hasFetchedInitial) return;
     _hasFetchedInitial = true;
-    fetchHistory(cookie, uid);
-  }
+    await restoreFromCache();
+    try {
+      await fetchHistory(cookie, uid, updateStatus: true);
 
-  Future<ll.LatLng> _getLatLng() async {
-    final data = await _location.getLocation();
-    if (data.latitude == null || data.longitude == null) {
-      throw Exception("GPS not found");
+    } catch (e) {
+      print("Background sync failed, but we have cache: $e");
     }
-    return ll.LatLng(data.latitude!, data.longitude!);
   }
 
-  void startAutoUpdates(String cookie, int uid) {
-    _autoTimer?.cancel();
-    _autoTimer = Timer.periodic(const Duration(minutes: 15), (_) async {
-      await _sendAutoLocationPing(cookie, uid);
-    });
-  }
 
-  void stopAutoUpdates() {
-    _autoTimer?.cancel();
-    _autoTimer = null;
+  Future<void> restoreFromCache() async {
+    if (_restored) return;
+    final data = await CheckinCache.load();
+
+    isCheckedIn = data["isCheckedIn"] as bool;
+    startAddress = (data["startAddress"] as String);
+    _currentFieldForceId = data["fieldForceId"] as int?;
+
+    _restored = true;
+    isHydrating = false;
     notifyListeners();
+  }
+
+  Future<void> _saveCache({String? checkInTime}) async {
+    await CheckinCache.save(
+      isCheckedIn: isCheckedIn,
+      startAddress: startAddress,
+      checkInTime: checkInTime,
+      fieldForceId: _currentFieldForceId,
+    );
+  }
+
+  double get totalDistanceKm {
+    if (historyRows.isEmpty) return 0.0;
+    final rows = [...historyRows];
+    rows.sort((a, b) {
+      final at = (a['journey_time'] ?? '').toString();
+      final bt = (b['journey_time'] ?? '').toString();
+      DateTime da = DateTime.tryParse(at.replaceFirst(' ', 'T')) ?? DateTime.fromMillisecondsSinceEpoch(0);
+      DateTime db = DateTime.tryParse(bt.replaceFirst(' ', 'T')) ?? DateTime.fromMillisecondsSinceEpoch(0);
+      return da.compareTo(db);
+    });
+
+
+    final points = <ll.LatLng>[];
+    for (final r in rows) {
+      final lat = (r['latitude'] as num?)?.toDouble();
+      final lng = (r['longitude'] as num?)?.toDouble();
+      if (lat == null || lng == null) continue;
+      points.add(ll.LatLng(lat, lng));
+    }
+
+    if (points.length < 2) return 0.0;
+
+    double total = 0.0;
+    for (int i = 1; i < points.length; i++) {
+      total += _haversineKm(points[i - 1], points[i]);
+    }
+    return total;
   }
 
   Future<void> _sendAutoLocationPing(String cookie, int uid) async {
@@ -69,8 +196,12 @@ class JourneyProviderView extends ChangeNotifier {
       //   journeyTime: DateTime.now(),
       // );
 
+      _currentFieldForceId ??= await _rpc(cookie).getLatestFieldForceIdForUser(uid);
+
+
       await _rpc(cookie).addJourneyHistoryLine(
-        fieldForceId: uid,
+        // fieldForceId: uid,
+        fieldForceId: _currentFieldForceId!,
         latitude: point.latitude,
         longitude: point.longitude,
         location: address,
@@ -85,104 +216,85 @@ class JourneyProviderView extends ChangeNotifier {
     }
   }
 
-  Future<void> handleCheckInOut(String cookie, int uid) async {
-    if (isSaving) return;
+  // Future<ll.LatLng> _getLatLng() async {
+  //   final data = await _location.getLocation();
+  //   if (data.latitude == null || data.longitude == null) {
+  //     throw Exception("GPS not found");
+  //   }
+  //   return ll.LatLng(data.latitude!, data.longitude!);
+  // }
 
-    isSaving = true;
-    locationStatus = "Fetching GPS...";
-    notifyListeners();
-
-    try {
-      final point = await _getLatLng();
-      final address = await getAddressFromLatLng(point);
-      final rpc = _rpc(cookie);
-
-      if (!isCheckedIn) {
-        await rpc.checkInCreateOrUpdate(
-          uid: uid,
-          startLocation: address,
-          latitude: point.latitude,
-          longitude: point.longitude,
-          journeyTime: DateTime.now(),
-        );
-        startAddress = address;
-        endAddress = null;
-        isCheckedIn = true;
-
-        _currentFieldForceId = uid;
-        historyRows.clear();
-        _sessionClosed = false;
-
-        await BackgroundJourneyService.start(
-          cookie: cookie,
-          uid: uid,
-          baseUrl: "https://demo.kendroo.com",
-        );
-        startAutoUpdates(cookie, uid);
-        locationStatus = "Check-in saved ✅";
-      } else {
-        await rpc.fieldForceCheckOut(
-          uid: uid,
-          endLocation: address,
-          latitude: point.latitude,
-          longitude: point.longitude,
-          journeyTime: DateTime.now(),
-        );
-        stopAutoUpdates();
-        await BackgroundJourneyService.stop();
-
-        endAddress = address;
-        isCheckedIn = false; // Set locally first
-        locationStatus = "Check-out saved ✅";
-
-        historyRows.clear();
-        _currentFieldForceId = null;
-        _sessionClosed = true;
+  Future<ll.LatLng> _getLatLng() async {
+    // 1) GPS service ON?
+    bool serviceEnabled = await _location.serviceEnabled();
+    if (!serviceEnabled) {
+      serviceEnabled = await _location.requestService();
+      if (!serviceEnabled) {
+        throw Exception("GPS is OFF. Please turn on Location.");
       }
-
-      await fetchHistory(cookie, uid, updateStatus: false);
-    } catch (e) {
-      locationStatus = "Error: $e";
-    } finally {
-      isSaving = false;
-      notifyListeners();
     }
+
+    // 2) Permission granted?
+    var permission = await _location.hasPermission();
+    if (permission == loc.PermissionStatus.denied) {
+      permission = await _location.requestPermission();
+    }
+
+    if (permission != loc.PermissionStatus.granted &&
+        permission != loc.PermissionStatus.grantedLimited) {
+      throw Exception("Location permission denied. Please allow location permission.");
+    }
+
+    // 3) Get location (with timeout)
+    final data = await _location.getLocation().timeout(const Duration(seconds: 12));
+
+    final lat = data.latitude;
+    final lng = data.longitude;
+
+    if (lat == null || lng == null) {
+      throw Exception("GPS not found. Try going outside / wait a few seconds.");
+    }
+
+    return ll.LatLng(lat, lng);
+  }
+  void startAutoUpdates(String cookie, int uid) {
+    _autoTimer?.cancel();
+    _autoTimer = Timer.periodic(const Duration(minutes: 15), (_) async {
+      await _sendAutoLocationPing(cookie, uid);
+    });
   }
 
-  Future<void> fetchHistory(String cookie, int uid, {bool updateStatus = true}) async {
-    if (_sessionClosed) return;
-    isSaving = true;
+  void stopAutoUpdates() {
+    _autoTimer?.cancel();
+    _autoTimer = null;
     notifyListeners();
-    try {
-      final rows = await _rpc(cookie).fetchLatestJourneyHistoryForUser(uid: uid);
-      historyRows = rows;
-
-      if (rows.isNotEmpty && updateStatus) {
-        final latest = rows.first;
-        final type = (latest['action'] ?? '').toString().toUpperCase();
-        isCheckedIn = type.contains('IN');
-        if (isCheckedIn) {
-          startAddress = latest['location'];
-          if (_autoTimer == null) startAutoUpdates(cookie, uid);
-        }
-      }
-      locationStatus = rows.isEmpty ? "No history found." : "History loaded ✅";
-    } catch (e) {
-      locationStatus = "Server error: $e";
-    } finally {
-      isSaving = false;
-      notifyListeners();
-    }
   }
 
+  double _deg2rad(double deg) => deg * (pi / 180.0);
+  double _haversineKm(ll.LatLng a, ll.LatLng b) {
+    const double r = 6371.0;
+    final dLat = _deg2rad(b.latitude - a.latitude);
+    final dLon = _deg2rad(b.longitude - a.longitude);
+
+    final lat1 = _deg2rad(a.latitude);
+    final lat2 = _deg2rad(b.latitude);
+
+    final h = (sin(dLat / 2) * sin(dLat / 2)) +
+        cos(lat1) * cos(lat2) * (sin(dLon / 2) * sin(dLon / 2));
+
+    final c = 2 * atan2(sqrt(h), sqrt(1 - h));
+    return r * c;
+  }
   Future<String> getAddressFromLatLng(ll.LatLng point) async {
     try {
-      List<Placemark> placemarks = await placemarkFromCoordinates(point.latitude, point.longitude);
+      List<Placemark> placemarks = await placemarkFromCoordinates(point.latitude, point.longitude).timeout(const Duration(seconds: 8));
       if (placemarks.isNotEmpty) {
         final p = placemarks.first;
         return "${p.name}, ${p.locality}, ${p.country}";
       }
-    } catch (_) {}
+    } catch (_) {
+      return "Lat:${point.latitude.toStringAsFixed(5)}, Lng:${point.longitude.toStringAsFixed(5)}";
+    }
     return "Unknown Address";
   }
 
@@ -219,6 +331,200 @@ class JourneyProviderView extends ChangeNotifier {
     );
   }
 
+  Future<void> fetchHistory(String cookie, int uid, {bool updateStatus = true}) async {
+    isSaving = true;
+    notifyListeners();
+
+    try {
+      final rows = await _rpc(cookie).fetchLatestJourneyHistoryForUser(uid: uid);
+
+      rows.sort((a, b) {
+        final da = DateTime.tryParse(a['journey_time'].toString().replaceFirst(' ', 'T')) ?? DateTime(0);
+        final db = DateTime.tryParse(b['journey_time'].toString().replaceFirst(' ', 'T')) ?? DateTime(0);
+        return db.compareTo(da);
+      });
+
+      historyRows = rows;
+
+      if (rows.isNotEmpty && updateStatus) {
+        final latestAction = (rows.first['action'] ?? '').toString().toUpperCase();
+        final bool serverStatus = latestAction.contains('IN');
+
+
+        isCheckedIn = serverStatus;
+
+        if (isCheckedIn) {
+          startAddress = rows.first['location'] ?? startAddress;
+          _currentFieldForceId = rows.first['field_force_id'] ?? await _rpc(cookie).getLatestFieldForceIdForUser(uid);
+
+          if (_autoTimer == null) startAutoUpdates(cookie, uid);
+        } else {
+          stopAutoUpdates();
+          _currentFieldForceId = null;
+        }
+
+        await _saveCache(checkInTime: rows.first['journey_time']?.toString());
+      }
+
+      locationStatus = rows.isEmpty ? "No history found." : "History loaded ✅";
+    } catch (e) {
+      locationStatus = "Sync failed: $e";
+    } finally {
+      isSaving = false;
+      notifyListeners();
+    }
+  }
+
+
+
+  Duration get totalWorkedDuration {
+    if (historyRows.isEmpty) return Duration.zero;
+
+
+    final rows = [...historyRows];
+    rows.sort((a, b) {
+      final at = (a['journey_time'] ?? '').toString();
+      final bt = (b['journey_time'] ?? '').toString();
+      final da = DateTime.tryParse(at.replaceFirst(' ', 'T')) ?? DateTime.fromMillisecondsSinceEpoch(0);
+      final db = DateTime.tryParse(bt.replaceFirst(' ', 'T')) ?? DateTime.fromMillisecondsSinceEpoch(0);
+      return da.compareTo(db);
+    });
+
+    DateTime? lastCheckIn;
+    var totalSeconds = 0;
+
+    for (final r in rows) {
+      final action = (r['action'] ?? '').toString().toUpperCase();
+      final timeStr = (r['journey_time'] ?? '').toString();
+      final t = DateTime.tryParse(timeStr.replaceFirst(' ', 'T'));
+      if (t == null) continue;
+
+      final isIn = action.contains('IN');
+      final isOut = action.contains('OUT');
+
+
+      if (isIn) {
+        lastCheckIn = t;
+      }
+
+
+      if (isOut && lastCheckIn != null && t.isAfter(lastCheckIn!)) {
+        totalSeconds += t.difference(lastCheckIn!).inSeconds;
+        lastCheckIn = null; // reset for next session
+      }
+    }
+
+    return Duration(seconds: totalSeconds);
+  }
+  Duration get totalWorkedDurationIncludingRunning {
+    final base = totalWorkedDuration;
+
+
+    final lastIn = _lastCheckInTime();
+    if (isCheckedIn && lastIn != null) {
+      return base + DateTime.now().difference(lastIn);
+    }
+    return base;
+  }
+
+  DateTime? _lastCheckInTime() {
+    final rows = [...historyRows];
+    rows.sort((a, b) {
+      final at = (a['journey_time'] ?? '').toString();
+      final bt = (b['journey_time'] ?? '').toString();
+      final da = DateTime.tryParse(at.replaceFirst(' ', 'T')) ?? DateTime.fromMillisecondsSinceEpoch(0);
+      final db = DateTime.tryParse(bt.replaceFirst(' ', 'T')) ?? DateTime.fromMillisecondsSinceEpoch(0);
+      return da.compareTo(db);
+    });
+
+    for (int i = rows.length - 1; i >= 0; i--) {
+      final action = (rows[i]['action'] ?? '').toString().toUpperCase();
+      if (action.contains('IN')) {
+        final t = DateTime.tryParse((rows[i]['journey_time'] ?? '').toString().replaceFirst(' ', 'T'));
+        if (t != null) return t;
+      }
+    }
+    return null;
+  }
+  Future<void> handleCheckInOut(String cookie, int uid) async {
+    if (isSaving) return;
+
+    isSaving = true;
+    locationStatus = "Fetching GPS...";
+    notifyListeners();
+
+    try {
+      final point = await _getLatLng().timeout(const Duration(seconds: 12));
+      locationStatus = "Step 2/3: Getting address...";
+      notifyListeners();
+
+      final address = await getAddressFromLatLng(point).timeout(const Duration(seconds: 10));
+      locationStatus = "Step 3/3: Sending to server...";
+      notifyListeners();
+      final rpc = _rpc(cookie);
+
+      if (!isCheckedIn) {
+        final ffId = await rpc.checkInCreateOrUpdate(
+          uid: uid,
+          startLocation: address,
+          latitude: point.latitude,
+          longitude: point.longitude,
+          journeyTime: DateTime.now(),
+        ).timeout(const Duration(seconds: 20));
+
+        startAddress = address;
+        endAddress = null;
+        isCheckedIn = true;
+        _currentFieldForceId = ffId;
+        locationStatus = "Check-in saved ✅";
+        historyRows.clear();
+        _sessionClosed = false;
+
+        await _saveCache(checkInTime: DateTime.now().toIso8601String());
+
+        await BackgroundJourneyService.start(
+          cookie: cookie,
+          uid: uid,
+          baseUrl: "https://demo.kendroo.com",
+        );
+
+        startAutoUpdates(cookie, uid);
+        locationStatus = "Check-in saved ✅";
+      } else {
+        await rpc.fieldForceCheckOut(
+          uid: uid,
+          endLocation: address,
+          latitude: point.latitude,
+          longitude: point.longitude,
+          journeyTime: DateTime.now(),
+        ).timeout(const Duration(seconds: 20));
+
+        stopAutoUpdates();
+        await BackgroundJourneyService.stop();
+
+        endAddress = address;
+        isCheckedIn = false;
+        _currentFieldForceId = null;
+        locationStatus = "Check-out saved ✅";
+
+        historyRows.clear();
+        _sessionClosed = true;
+
+        await _saveCache(checkInTime: "");
+
+        locationStatus = "Check-out saved ✅";
+      }
+
+      notifyListeners();
+      await fetchHistory(cookie, uid, updateStatus: false);
+    } catch (e) {
+      locationStatus = "Error: $e";
+    } finally {
+      isSaving = false;
+      notifyListeners();
+    }
+  }
+
   @override
   void dispose() {
     _autoTimer?.cancel();
@@ -226,196 +532,28 @@ class JourneyProviderView extends ChangeNotifier {
   }
 }
 
-// class JourneyScreen extends StatelessWidget {
-//   const JourneyScreen({super.key});
-//
-//   @override
-//   Widget build(BuildContext context) {
-//
-//     final auth = context.read<AuthProvider>();
-//
-//     final journey = context.watch<JourneyProviderView>();
-//
-//
-//     if (!journey.isSaving && journey.historyRows.isEmpty) {
-//       Future.microtask(() =>
-//           journey.init(auth.sessionCookie!, auth.user!.uid)
-//       );
-//     }
-//
-//     return Scaffold(
-//       appBar: AppBar(
-//         title: const Text("Journey Tracker"),
-//         backgroundColor: Colors.indigo,
-//         elevation: 0,
-//       ),
-//       body: SafeArea(
-//         child: Column(
-//           children: [
-//             Expanded(
-//               child: RefreshIndicator(
-//                 onRefresh: () => journey.fetchHistory(auth.sessionCookie!, auth.user!.uid),
-//                 child: SingleChildScrollView(
-//                   physics: const AlwaysScrollableScrollPhysics(),
-//                   padding: const EdgeInsets.all(16),
-//                   child: Column(
-//                     children: [
-//                       _buildStatusCard(journey),
-//                       const SizedBox(height: 12),
-//                       Text(
-//                         journey.locationStatus,
-//                         style: const TextStyle(fontStyle: FontStyle.italic, color: Colors.grey, fontSize: 12),
-//                       ),
-//                       const SizedBox(height: 20),
-//                       const Align(
-//                         alignment: Alignment.centerLeft,
-//                         child: Text("History Logs", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-//                       ),
-//                       const Divider(),
-//                       _buildHistoryList(journey),
-//                     ],
-//                   ),
-//                 ),
-//               ),
-//             ),
-//
-//             // Map Button
-//             Padding(
-//               padding: const EdgeInsets.symmetric(horizontal: 16.0),
-//               child: SizedBox(
-//                 width: double.infinity,
-//                 child: OutlinedButton.icon(
-//                   onPressed: journey.historyRows.isEmpty ? null : () {
-//                     final data = journey.buildMapDataFromHistory();
-//                     Navigator.push(
-//                       context,
-//                       MaterialPageRoute(builder: (_) => JourneyMapScreen(data: data)),
-//                     );
-//                   },
-//                   icon: const Icon(Icons.map_outlined),
-//                   label: const Text("VIEW MAP"),
-//                   style: OutlinedButton.styleFrom(
-//                     padding: const EdgeInsets.symmetric(vertical: 14),
-//                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-//                   ),
-//                 ),
-//               ),
-//             ),
-//             const SizedBox(height: 10),
-//             _buildBottomBar(context, journey, auth),
-//           ],
-//         ),
-//       ),
-//     );
-//   }
-//
-//   Widget _buildStatusCard(JourneyProviderView journey) {
-//     return Card(
-//       elevation: 2,
-//       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-//       child: Padding(
-//         padding: const EdgeInsets.all(16),
-//         child: Column(
-//           children: [
-//             _row(Icons.play_arrow, Colors.green, "Started at:", journey.startAddress),
-//             const Divider(height: 24),
-//             _row(Icons.stop, Colors.red, "Ended at:", journey.endAddress),
-//             if (journey.isSaving)
-//               const Padding(
-//                 padding: EdgeInsets.only(top: 12.0),
-//                 child: LinearProgressIndicator(minHeight: 2),
-//               ),
-//           ],
-//         ),
-//       ),
-//     );
-//   }
-//
-//   Widget _row(IconData icon, Color color, String label, String? value) {
-//     return Row(
-//       children: [
-//         Icon(icon, color: color, size: 28),
-//         const SizedBox(width: 12),
-//         Expanded(
-//           child: Column(
-//             crossAxisAlignment: CrossAxisAlignment.start,
-//             children: [
-//               Text(label, style: const TextStyle(fontSize: 11, color: Colors.grey)),
-//               Text(
-//                 value ?? "Not recorded",
-//                 style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-//                 maxLines: 1,
-//                 overflow: TextOverflow.ellipsis,
-//               ),
-//             ],
-//           ),
-//         )
-//       ],
-//     );
-//   }
-//
-//   Widget _buildHistoryList(JourneyProviderView journey) {
-//     if (journey.historyRows.isEmpty && !journey.isSaving) {
-//       return const Padding(
-//         padding: EdgeInsets.all(20.0),
-//         child: Text("No activity yet"),
-//       );
-//     }
-//     return ListView.separated(
-//       shrinkWrap: true,
-//       physics: const NeverScrollableScrollPhysics(),
-//       itemCount: journey.historyRows.length,
-//       separatorBuilder: (_, __) => const Divider(height: 1),
-//       itemBuilder: (context, index) {
-//         final item = journey.historyRows[index];
-//         final isCheckIn = item['action'].toString().contains('IN');
-//         return ListTile(
-//           contentPadding: EdgeInsets.zero,
-//           leading: CircleAvatar(
-//             backgroundColor: isCheckIn ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
-//             child: Icon(isCheckIn ? Icons.login : Icons.logout,
-//                 color: isCheckIn ? Colors.green : Colors.red, size: 18),
-//           ),
-//           title: Text(item['location'] ?? 'Unknown', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
-//           subtitle: Text(item['journey_time'] ?? '', style: const TextStyle(fontSize: 11)),
-//           trailing: Container(
-//             padding: const EdgeInsets.all(4),
-//             decoration: BoxDecoration(color: Colors.grey[200], borderRadius: BorderRadius.circular(4)),
-//             child: Text(item['action'] ?? '', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
-//           ),
-//         );
-//       },
-//     );
-//   }
-//
-//   Widget _buildBottomBar(BuildContext context, JourneyProviderView journey, AuthProvider auth) {
-//     return Padding(
-//       padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-//       child: SizedBox(
-//         width: double.infinity,
-//         height: 56,
-//         child: ElevatedButton.icon(
-//           onPressed: journey.isSaving
-//               ? null
-//               : () => journey.handleCheckInOut(auth.sessionCookie!, auth.user!.uid),
-//           icon: Icon(journey.isCheckedIn ? Icons.logout : Icons.login),
-//           label: Text(
-//             journey.isCheckedIn ? "CHECK OUT" : "CHECK IN",
-//             style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-//           ),
-//           style: ElevatedButton.styleFrom(
-//             backgroundColor: journey.isCheckedIn ? Colors.redAccent : Colors.indigo,
-//             foregroundColor: Colors.white,
-//             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-//           ),
-//         ),
-//       ),
-//     );
-//   }
-// }
+class JourneyScreen extends StatefulWidget {
+  @override
+  State<JourneyScreen> createState() => _JourneyScreenState();
+}
 
-class JourneyScreen extends StatelessWidget {
-  const JourneyScreen({super.key});
+class _JourneyScreenState extends State<JourneyScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Use addPostFrameCallback to ensure the provider is ready
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final auth = Provider.of<AuthProvider>(context, listen: false);
+      final journey = Provider.of<JourneyProviderView>(context, listen: false);
+      journey.init(auth.sessionCookie!, auth.user!.uid);
+    });
+  }
+
+//class JourneyScreen extends StatelessWidget {
+ // JourneyScreen({super.key});
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
+  double _dragValue = 0.0;
 
   @override
   Widget build(BuildContext context) {
@@ -424,146 +562,444 @@ class JourneyScreen extends StatelessWidget {
 
     final w = MediaQuery.of(context).size.width;
     final isSmall = w < 360;
-    final isTablet = w >= 600;
 
-    final padding = isSmall ? 12.0 : 16.0;
-    final titleFont = isSmall ? 14.0 : (isTablet ? 18.0 : 16.0);
+    final padding = isSmall ? 14.0 : 16.0;
 
-    if (!journey.isSaving && journey.historyRows.isEmpty) {
-      Future.microtask(() =>
-          journey.init(auth.sessionCookie!, auth.user!.uid));
-    }
+
+   // Future.microtask(() => journey.init(auth.sessionCookie!, auth.user!.uid));
+   // journey.scheduleInit(auth.sessionCookie!, auth.user!.uid);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Journey Tracker"),
-        backgroundColor: Colors.indigo,
-        elevation: 0,
-      ),
+      key: _scaffoldKey,
+      backgroundColor: const Color(0xFFF6F8FF),
+      drawer: _appDrawer(context),
       body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              child: RefreshIndicator(
-                onRefresh: () => journey.fetchHistory(auth.sessionCookie!, auth.user!.uid),
-                child: ListView(
-                  padding: EdgeInsets.all(padding),
-                  children: [
-                    _buildStatusCard(journey, isSmall),
-                    const SizedBox(height: 12),
+        child: RefreshIndicator(
+          onRefresh: () => journey.fetchHistory(auth.sessionCookie!, auth.user!.uid),
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            child: Padding(
+              padding: EdgeInsets.all(padding),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildTopHeader(
+                    context,
+                    isSmall: isSmall,
+                    name: auth.user?.name ?? "User",
+                    role: auth.user?.companyName ?? "",
+                    onMenu: () {
+                      _scaffoldKey.currentState?.openDrawer();
+                    },
+                    onBell: () {},
+                    onProfile: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const MyProfilePage(),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 14),
 
-                    Text(
-                      journey.locationStatus,
-                      style: TextStyle(
-                        fontStyle: FontStyle.italic,
-                        color: Colors.grey,
-                        fontSize: isSmall ? 11 : 12,
-                      ),
+                  _buildCheckInCard(
+                    context,
+                    isSmall: isSmall,
+                    journey: journey,
+                    onMapTap: () {
+                      if (journey.historyRows.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text("No checkin history found"),
+                          ),
+                        );
+                        return;
+                      }
+                      final data = journey.buildMapDataFromHistory();
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => JourneyMapScreen(data: data)),
+                      );
+                    },
+
+                    onSwipeTap: journey.isSaving
+                        ? null
+                        : () => journey.handleCheckInOut(auth.sessionCookie!, auth.user!.uid),
+                  ),
+                  Text(
+                    "Hydrating: ${journey.isHydrating} | Saving: ${journey.isSaving}",
+                    style: const TextStyle(fontSize: 12, color: Colors.red),
+                  ),
+                  const SizedBox(height: 14),
+
+                  Text(
+                    "Today’s Record",
+                    style: TextStyle(
+                      fontSize: isSmall ? 13 : 14,
+                      fontWeight: FontWeight.w800,
+                      color: const Color(0xFF1C2A4A),
                     ),
+                  ),
+                  const SizedBox(height: 10),
 
-                    const SizedBox(height: 18),
-
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        "History Logs",
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: titleFont,
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _statTile(
+                          isSmall: isSmall,
+                          icon: Icons.route,
+                          value: _distanceText(journey),
+                          label: "Distance\nTravelled",
                         ),
                       ),
-                    ),
-                    const Divider(),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _statTile(
+                          isSmall: isSmall,
+                          icon: Icons.access_time,
+                          value: _workedDurationText(journey),
+                          label: "Hrs\nworked",
+                        ),
+                      ),
 
-                    _buildHistoryList(journey, isSmall),
-                  ],
-                ),
-              ),
-            ),
-
-            // MAP BUTTON
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: padding),
-              child: SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: journey.historyRows.isEmpty
-                      ? null
-                      : () {
-                    final data = journey.buildMapDataFromHistory();
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) => JourneyMapScreen(data: data)),
-                    );
-                  },
-                  icon: const Icon(Icons.map_outlined),
-                  label: const Text("VIEW MAP"),
-                  style: OutlinedButton.styleFrom(
-                    padding: EdgeInsets.symmetric(vertical: isSmall ? 12 : 14),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
+                    ],
                   ),
-                ),
+
+                  const SizedBox(height: 16),
+
+                  const SizedBox(height: 12),
+
+                  Text(
+                    journey.locationStatus,
+                    style: TextStyle(
+                      fontStyle: FontStyle.italic,
+                      color: Colors.grey[700],
+                      fontSize: isSmall ? 11 : 12,
+                    ),
+                  ),
+
+                  const SizedBox(height: 18),
+
+                  Text(
+                    "History Logs",
+                    style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: isSmall ? 14 : 16,
+                      color: const Color(0xFF1C2A4A),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  _buildHistoryList(journey, isSmall),
+
+                  const SizedBox(height: 24),
+                ],
               ),
             ),
-
-            const SizedBox(height: 8),
-            _buildBottomBar(context, journey, auth, isSmall),
-          ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildStatusCard(JourneyProviderView journey, bool isSmall) {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: EdgeInsets.all(isSmall ? 12 : 16),
-        child: Column(
-          children: [
-            _row(Icons.play_arrow, Colors.green, "Started at:", journey.startAddress, isSmall),
-            const Divider(height: 24),
-            _row(Icons.stop, Colors.red, "Ended at:", journey.endAddress, isSmall),
-            if (journey.isSaving)
-              const Padding(
-                padding: EdgeInsets.only(top: 12.0),
-                child: LinearProgressIndicator(minHeight: 2),
-              ),
-          ],
-        ),
+  Widget _appDrawer(BuildContext context) {
+    return Drawer(
+      child: ListView(
+        padding: EdgeInsets.symmetric(vertical: 80),
+        children: [
+
+          _drawerItem(context, icon: Icons.home, title: "Employees", onTap: () {
+            Navigator.push(context, MaterialPageRoute(builder: (context) => EmployeeListView()));
+          }),
+
+          _drawerItem(context, icon: Icons.info, title: "About", onTap: () {}),
+          _drawerItem(context, icon: Icons.help_outline, title: "Query", onTap: () {}),
+          _drawerItem(context, icon: Icons.share, title: "Share", onTap: () {}),
+          _drawerItem(context, icon: Icons.privacy_tip, title: "Privacy policy", onTap: () {}),
+        ],
       ),
     );
   }
 
-  Widget _row(
-      IconData icon, Color color, String label, String? value, bool isSmall) {
+  Widget _drawerItem(
+      BuildContext context, {
+        required IconData icon,
+        required String title,
+        required VoidCallback onTap,
+      }) {
+    return ListTile(
+      leading: Icon(icon, color: Colors.black),
+      title: Text(
+        title,
+        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+      ),
+      onTap: () {
+        Navigator.pop(context);
+        onTap();
+      },
+    );
+  }
+  Widget _buildTopHeader(
+      BuildContext context, {
+        required bool isSmall,
+        required String name,
+        required String role,
+        required VoidCallback onMenu,
+        required VoidCallback onBell,
+        required VoidCallback onProfile,
+      }) {
     return Row(
       children: [
-        Icon(icon, color: color, size: isSmall ? 24 : 28),
-        const SizedBox(width: 12),
+        InkWell(
+          onTap: onMenu,
+          borderRadius: BorderRadius.circular(14),
+          child: const Padding(
+            padding: EdgeInsets.all(6),
+            child: Icon(Icons.menu_rounded),
+          ),
+        ),
+        const SizedBox(width: 10),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(label,
-                  style: TextStyle(fontSize: isSmall ? 10 : 11, color: Colors.grey)),
               Text(
-                value ?? "Not recorded",
+                "Hi!",
                 style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: isSmall ? 13 : 14),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
+                  fontSize: isSmall ? 16 : 18,
+                  fontWeight: FontWeight.w900,
+                  color: const Color(0xFF1C2A4A),
+                ),
               ),
+              const SizedBox(height: 2),
+              Text(
+                name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: isSmall ? 13 : 14,
+                  fontWeight: FontWeight.w800,
+                  color: const Color(0xFF1C2A4A),
+                ),
+              ),
+              if (role.isNotEmpty)
+                Text(
+                  role,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: isSmall ? 11 : 12,
+                    color: const Color(0xFF7D8BB3),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
             ],
           ),
-        )
+        ),
+        const SizedBox(width: 8),
+
+        _circleIconButton(icon: Icons.person_outline_rounded, onTap: onProfile),
       ],
     );
   }
+
+  Widget _circleIconButton({required IconData icon, required VoidCallback onTap}) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(999),
+      child: Container(
+        width: 38,
+        height: 38,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(999),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.06),
+              blurRadius: 10,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Icon(icon, color: const Color(0xFF1C2A4A)),
+      ),
+    );
+  }
+
+
+  Widget _buildCheckInCard(
+      BuildContext context, {
+        required bool isSmall,
+        required JourneyProviderView journey,
+        required VoidCallback onMapTap,
+        required VoidCallback? onSwipeTap,
+      }) {
+    final now = DateTime.now();
+    final weekday = const ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][now.weekday - 1];
+    final month = const ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][now.month - 1];
+
+    final checkInTime = _latestTimeText(journey, wantIn: false);
+    final checkOutTime = _latestTimeText(journey, wantIn: true);
+
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF77A6FF), Color(0xFF4F7BFF)],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 18,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: EdgeInsets.all(isSmall ? 14 : 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Text(
+                  "$weekday, $month ${now.day.toString().padLeft(2, '0')}",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: isSmall ? 12 : 13,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const Spacer(),
+                InkWell(
+                  onTap: onMapTap,
+                  child: Row(
+                    children: [
+                      const Icon(Icons.map_outlined, color: Colors.white, size: 18),
+                      const SizedBox(width: 4),
+                      Text(
+                        "Map",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: isSmall ? 12 : 13,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.95),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              padding: EdgeInsets.all(isSmall ? 12 : 14),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _inOutMini(
+                          isSmall: isSmall,
+                          label: "Check IN",
+                          timeText: checkInTime,
+                          alignLeft: true,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _inOutMini(
+                          isSmall: isSmall,
+                          label: "Check OUT",
+                          timeText: checkOutTime,
+                          alignLeft: false,
+                        ),
+                      ),
+                      if (journey.isCheckedIn) ...[
+                        const SizedBox(width: 10),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFC048),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            "00:05",
+                            style: TextStyle(
+                              fontWeight: FontWeight.w900,
+                              fontSize: isSmall ? 11 : 12,
+                              color: const Color(0xFF1C2A4A),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  // SwipeToAction(
+                  //   isSmall: isSmall,
+                  //   isLoading: journey.isSaving,
+                  //   isCheckedIn: journey.isCheckedIn,
+                  //   onSubmit: onSwipeTap,
+                  // ),
+// Inside _buildCheckInCard, look for the SwipeToAction part:
+
+                  journey.isHydrating
+                      ? const Center(child: CircularProgressIndicator()) // Show loading on cold start
+                      : SwipeToAction(
+                    isSmall: isSmall,
+                    isLoading: journey.isSaving,
+                    isCheckedIn: journey.isCheckedIn,
+                    onSubmit: onSwipeTap,
+                  ),
+
+
+
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _inOutMini({
+    required bool isSmall,
+    required String label,
+    required String timeText,
+    required bool alignLeft,
+  }) {
+    return Column(
+      crossAxisAlignment: alignLeft ? CrossAxisAlignment.start : CrossAxisAlignment.end,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: isSmall ? 11 : 12,
+            color: const Color(0xFF7D8BB3),
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        const SizedBox(height: 3),
+        Text(
+          timeText,
+          style: TextStyle(
+            fontSize: isSmall ? 14 : 15,
+            color: const Color(0xFF1C2A4A),
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+      ],
+    );
+  }
+
+
 
   Widget _buildHistoryList(JourneyProviderView journey, bool isSmall) {
     if (journey.historyRows.isEmpty && !journey.isSaving) {
@@ -573,102 +1009,386 @@ class JourneyScreen extends StatelessWidget {
       );
     }
 
-    return ListView.separated(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: journey.historyRows.length,
-      separatorBuilder: (_, __) => const Divider(height: 1),
-      itemBuilder: (context, index) {
-        final item = journey.historyRows[index];
-        final isCheckIn = item['action'].toString().contains('IN');
-
-        return Padding(
-          padding: EdgeInsets.symmetric(vertical: isSmall ? 6 : 8),
-          child: Row(
-            children: [
-              CircleAvatar(
-                radius: isSmall ? 16 : 18,
-                backgroundColor:
-                isCheckIn ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
-                child: Icon(
-                  isCheckIn ? Icons.login : Icons.logout,
-                  color: isCheckIn ? Colors.green : Colors.red,
-                  size: isSmall ? 16 : 18,
-                ),
-              ),
-              const SizedBox(width: 10),
-
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      item['location'] ?? 'Unknown',
-                      style: TextStyle(
-                        fontSize: isSmall ? 12 : 13,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    Text(
-                      item['journey_time'] ?? '',
-                      style: TextStyle(fontSize: isSmall ? 10 : 11),
-                    ),
-                  ],
-                ),
-              ),
-
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.grey[200],
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  item['action'] ?? '',
-                  style: TextStyle(
-                      fontSize: isSmall ? 9 : 10,
-                      fontWeight: FontWeight.bold),
-                ),
-              ),
-            ],
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 12,
+            offset: const Offset(0, 8),
           ),
-        );
-      },
+        ],
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: ListView.separated(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: journey.historyRows.length,
+        separatorBuilder: (_, __) => const Divider(height: 1),
+        itemBuilder: (context, index) {
+          final item = journey.historyRows[index];
+          final isCheckIn = item['action'].toString().toUpperCase().contains('IN');
+
+          return Padding(
+            padding: EdgeInsets.symmetric(vertical: isSmall ? 8 : 10),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: isSmall ? 16 : 18,
+                  backgroundColor: isCheckIn
+                      ? const Color(0xFF3A6BFF).withOpacity(0.10)
+                      : const Color(0xFFFF6B81).withOpacity(0.10),
+                  child: Icon(
+                    isCheckIn ? Icons.login : Icons.logout,
+                    color: isCheckIn ? const Color(0xFF3A6BFF) : const Color(0xFFFF6B81),
+                    size: isSmall ? 16 : 18,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        item['location'] ?? 'Unknown',
+                        style: TextStyle(
+                          fontSize: isSmall ? 12 : 13,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF1C2A4A),
+                        ),
+                      ),
+                      Text(
+                        item['journey_time'] ?? '',
+                        style: TextStyle(
+                          fontSize: isSmall ? 10 : 11,
+                          color: const Color(0xFF7D8BB3),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEFF4FF),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: const Color(0xFFD6E2FF)),
+                  ),
+                  child: Text(
+                    (item['action'] ?? '').toString(),
+                    style: TextStyle(
+                      fontSize: isSmall ? 9 : 10,
+                      fontWeight: FontWeight.w900,
+                      color: const Color(0xFF1C2A4A),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
 
-  Widget _buildBottomBar(
-      BuildContext context,
-      JourneyProviderView journey,
-      AuthProvider auth,
-      bool isSmall,
-      ) {
-    return Padding(
-      padding: EdgeInsets.fromLTRB(16, 0, 16, isSmall ? 12 : 16),
-      child: SizedBox(
-        width: double.infinity,
-        height: isSmall ? 50 : 56,
-        child: ElevatedButton.icon(
-          onPressed: journey.isSaving
+
+  Widget _statTile({
+    required bool isSmall,
+    required IconData icon,
+    required String value,
+    required String label,
+  }) {
+    return Container(
+        height: isSmall ? 92 : 98,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.06),
+              blurRadius: 12,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        padding: const EdgeInsets.all(12),
+        child:
+        Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: isSmall ? 20 : 22, color: const Color(0xFF3A6BFF)),
+            const SizedBox(height: 6),
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: isSmall ? 12 : 13,
+                fontWeight: FontWeight.w900,
+                color: const Color(0xFF1C2A4A),
+              ),
+            ),
+            const SizedBox(height: 4),
+            Expanded(
+              child: Center(
+                child: Text(
+                  label,
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: isSmall ? 10 : 11,
+                    color: const Color(0xFF7D8BB3),
+                    fontWeight: FontWeight.w700,
+                    height: 1.15,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        )
+
+    );
+  }
+
+
+  static String _latestTimeText(JourneyProviderView journey, {required bool wantIn}) {
+    final rows = journey.historyRows;
+
+    for (final item in rows) {
+      final action = (item['action'] ?? '').toString().toUpperCase();
+      final isIn = action.contains('IN');
+      if ((wantIn && isIn) || (!wantIn && !isIn)) {
+        final t = (item['journey_time'] ?? '').toString();
+        if (t.isNotEmpty) return t;
+      }
+    }
+    return "00:00 am";
+  }
+
+  static String _distanceText(JourneyProviderView journey) {
+    final km = journey.totalDistanceKm;
+    return "${km.toStringAsFixed(2)} KM";
+  }
+
+  static String _workedDurationText(JourneyProviderView journey) {
+    final d = journey.totalWorkedDurationIncludingRunning;
+    final h = d.inHours.toString().padLeft(2, '0');
+    final m = (d.inMinutes % 60).toString().padLeft(2, '0');
+    final s = (d.inSeconds % 60).toString().padLeft(2, '0');
+    return "$h:$m:$s";
+  }
+
+}
+
+class SwipeToAction extends StatefulWidget {
+  final bool isSmall;
+  final bool isLoading;
+  final bool isCheckedIn;
+  final VoidCallback? onSubmit;
+
+  const SwipeToAction({
+    super.key,
+    required this.isSmall,
+    required this.isLoading,
+    required this.isCheckedIn,
+    required this.onSubmit,
+  });
+
+  @override
+  State<SwipeToAction> createState() => _SwipeToActionState();
+}
+
+class _SwipeToActionState extends State<SwipeToAction> {
+  double _drag = 0.0;
+
+  // @override
+  // Widget build(BuildContext context) {
+  //   final h = widget.isSmall ? 44.0 : 48.0;
+  //   final knob = widget.isSmall ? 36.0 : 38.0;
+  //   final maxDrag = (MediaQuery.of(context).size.width) - 32 /*screen padding approx*/ - 24 /*container padding*/ - knob;
+  //
+  //   final progress = (_drag / (maxDrag <= 1 ? 1 : maxDrag)).clamp(0.0, 1.0);
+  //
+  //   return GestureDetector(
+  //     onHorizontalDragUpdate: widget.isLoading || widget.onSubmit == null
+  //         ? null
+  //         : (d) {
+  //       setState(() {
+  //         _drag = (_drag + d.delta.dx).clamp(0.0, maxDrag);
+  //       });
+  //     },
+  //     onHorizontalDragEnd: widget.isLoading || widget.onSubmit == null
+  //         ? null
+  //         : (_) async {
+  //
+  //       if (progress >= 1) {
+  //         widget.onSubmit?.call();
+  //       }
+  //
+  //       setState(() => _drag = 0.0);
+  //     },
+  //     child: Container(
+  //       height: h,
+  //       decoration: BoxDecoration(
+  //         color: const Color(0xFFEFF4FF),
+  //         borderRadius: BorderRadius.circular(999),
+  //         border: Border.all(color: const Color(0xFFD6E2FF)),
+  //       ),
+  //       padding: const EdgeInsets.symmetric(horizontal: 12),
+  //       child: Stack(
+  //         alignment: Alignment.centerLeft,
+  //         children: [
+  //
+  //           Align(
+  //             alignment: Alignment.center,
+  //             child: Text(
+  //               widget.isCheckedIn ? "Swipe to Check Out" : "Swipe to Check In",
+  //               style: TextStyle(
+  //                 color: const Color(0xFF1C2A4A),
+  //                 fontWeight: FontWeight.w800,
+  //                 fontSize: widget.isSmall ? 12 : 13,
+  //               ),
+  //             ),
+  //           ),
+  //
+  //
+  //           AnimatedAlign(
+  //             duration: const Duration(milliseconds: 80),
+  //             alignment: Alignment(-1 + (2 * progress), 0),
+  //             child: Container(
+  //               width: knob,
+  //               height: knob,
+  //               decoration: BoxDecoration(
+  //                 color: widget.isCheckedIn
+  //                     ? const Color(0xFFFF6B81)
+  //                     : const Color(0xFF3A6BFF),
+  //                 borderRadius: BorderRadius.circular(999),
+  //               ),
+  //               child: widget.isLoading
+  //                   ? const Padding(
+  //                 padding: EdgeInsets.all(10),
+  //                 child: CircularProgressIndicator(
+  //                   strokeWidth: 2,
+  //                   color: Colors.white,
+  //                 ),
+  //               )
+  //                   : Icon(
+  //                 widget.isCheckedIn ? Icons.logout_rounded : Icons.arrow_forward_rounded,
+  //                 color: Colors.white,
+  //               ),
+  //             ),
+  //           ),
+  //         ],
+  //       ),
+  //     ),
+  //   );
+  // }
+
+  late Future<bool> _locationOnFuture;   // ✅ cache it once
+
+  @override
+  void initState() {
+    super.initState();
+    _locationOnFuture = Geolocator.isLocationServiceEnabled(); // ✅ only once
+  }
+  @override
+  Widget build(BuildContext context) {
+    final h = widget.isSmall ? 44.0 : 48.0;
+    final knob = widget.isSmall ? 36.0 : 38.0;
+    final maxDrag = (MediaQuery.of(context).size.width) -
+        32 - 24 -
+        knob;
+
+    final progress = (_drag / (maxDrag <= 1 ? 1 : maxDrag)).clamp(0.0, 1.0);
+
+    return FutureBuilder<bool>(
+      future: _locationOnFuture,
+      builder: (context, snap) {
+        final isLocationOn = snap.data ?? true;
+        final blockSwipe = !isLocationOn && (widget.isCheckedIn || !widget.isCheckedIn);
+
+        final label = blockSwipe
+            ? "Plz turn on the location"
+            : (widget.isCheckedIn ? "Swipe to Check Out" : "Swipe to Check In");
+
+        return GestureDetector(
+          onHorizontalDragUpdate: widget.isLoading || widget.onSubmit == null || blockSwipe
               ? null
-              : () => journey.handleCheckInOut(auth.sessionCookie!, auth.user!.uid),
-          icon: Icon(journey.isCheckedIn ? Icons.logout : Icons.login),
-          label: Text(
-            journey.isCheckedIn ? "CHECK OUT" : "CHECK IN",
-            style: TextStyle(
-              fontSize: isSmall ? 14 : 16,
-              fontWeight: FontWeight.bold,
+              : (d) {
+            setState(() {
+              _drag = (_drag + d.delta.dx).clamp(0.0, maxDrag);
+            });
+          },
+          onHorizontalDragEnd: widget.isLoading || widget.onSubmit == null || blockSwipe
+              ? null
+              : (_) async {
+            if (progress >= 1) {
+              widget.onSubmit?.call();
+            }
+            setState(() => _drag = 0.0);
+          },
+          child: Opacity(
+            opacity: blockSwipe ? 0.55 : 1.0,
+            child: Container(
+              height: h,
+              decoration: BoxDecoration(
+                color: const Color(0xFFEFF4FF),
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(color: const Color(0xFFD6E2FF)),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Stack(
+                alignment: Alignment.centerLeft,
+                children: [
+                  Align(
+                    alignment: Alignment.center,
+                    child: Text(
+                      label,
+                      style: TextStyle(
+                        color: blockSwipe ? Colors.red : const Color(0xFF1C2A4A),
+                        fontWeight: FontWeight.w800,
+                        fontSize: widget.isSmall ? 12 : 13,
+                      ),
+                    ),
+                  ),
+                  AnimatedAlign(
+                    duration: const Duration(milliseconds: 80),
+                    alignment: Alignment(-1 + (2 * progress), 0),
+                    child: Container(
+                      width: knob,
+                      height: knob,
+                      decoration: BoxDecoration(
+                        color: blockSwipe
+                            ? Colors.grey
+                            : (widget.isCheckedIn
+                            ? const Color(0xFFFF6B81)
+                            : const Color(0xFF3A6BFF)),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: widget.isLoading
+                          ? const Padding(
+                        padding: EdgeInsets.all(10),
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                          : Icon(
+                        widget.isCheckedIn
+                            ? Icons.logout_rounded
+                            : Icons.arrow_forward_rounded,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-          style: ElevatedButton.styleFrom(
-            backgroundColor:
-            journey.isCheckedIn ? Colors.redAccent : Colors.indigo,
-            foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12)),
-          ),
-        ),
-      ),
+        );
+      },
     );
   }
 }

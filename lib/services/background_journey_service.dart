@@ -1,11 +1,12 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:ui';
 import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:flutter_background_service_android/flutter_background_service_android.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:location/location.dart';
 import 'package:http/http.dart' as http;
-
+@pragma('vm:entry-point')
 class BackgroundJourneyService {
   static Future<void> start({
     required String baseUrl,
@@ -14,31 +15,31 @@ class BackgroundJourneyService {
   }) async {
     final service = FlutterBackgroundService();
 
-    // --- ADD THIS BLOCK ---
+
     final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
     FlutterLocalNotificationsPlugin();
 
-    // Define the channel
+
     const AndroidNotificationChannel channel = AndroidNotificationChannel(
-      'journey_tracking', // Must match notificationChannelId below
+      'journey_tracking',
       'Journey Tracking Service',
       description: 'This channel is used for journey tracking features.',
-      importance: Importance.low, // low importance = no sound/interruption
+      importance: Importance.low,
     );
 
-    // Create the channel on the device
     await flutterLocalNotificationsPlugin
         .resolvePlatformSpecificImplementation<
         AndroidFlutterLocalNotificationsPlugin>()
         ?.createNotificationChannel(channel);
-    // ----------------------
+
 
     await service.configure(
       androidConfiguration: AndroidConfiguration(
         onStart: _onStart,
+
         isForegroundMode: true,
         autoStart: true,
-        notificationChannelId: 'journey_tracking', // Matches the channel above
+        notificationChannelId: 'journey_tracking',
         initialNotificationTitle: 'Journey Tracking',
         initialNotificationContent: 'Location tracking active',
         foregroundServiceNotificationId: 888,
@@ -47,9 +48,6 @@ class BackgroundJourneyService {
     );
 
     await service.startService();
-    await service.startService();
-
-
 
     service.invoke('setData', {
 
@@ -67,8 +65,9 @@ class BackgroundJourneyService {
     final service = FlutterBackgroundService();
     service.invoke('stopService');
   }
-
+  @pragma('vm:entry-point')
   static void _onStart(ServiceInstance service) async {
+    DartPluginRegistrant.ensureInitialized();
     if (service is AndroidServiceInstance) {
       service.setAsForegroundService();
     }
@@ -120,7 +119,7 @@ class BackgroundJourneyService {
           body: jsonEncode(payload),
         );
       } catch (_) {
-        // silent fail – background safe
+
       }
     });
   }
