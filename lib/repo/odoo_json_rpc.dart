@@ -165,8 +165,6 @@ class OdooSessionRpc {
     );
   }
 
-
-
   String _toOdooDatetime(DateTime dt) {
     final u = dt.toUtc();
     String two(int n) => n.toString().padLeft(2, '0');
@@ -472,6 +470,21 @@ class OdooSessionRpc {
     );
 
     return (result as List).cast<Map<String, dynamic>>();
+  }
+
+
+  Future<bool> write({
+    required String model,
+    required List<int> ids,
+    required Map<String, dynamic> values,
+  }) async {
+    final result = await callKw(
+      model: model,
+      method: "write",
+      args: [ids, values],
+    );
+
+    return result == true;
   }
 
 }

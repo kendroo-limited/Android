@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 
+import 'package:field_force_2/view/projects_tasks_page.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
@@ -59,9 +60,6 @@ import 'journey_map_screen.dart';
 // //   await sp.remove(_kFieldForceId);
 // // }
 // }
-
-
-
 class CheckinCache {
   static const String _key = "checkin_data";
 
@@ -140,7 +138,9 @@ class JourneyProviderView extends ChangeNotifier {
     isCheckedIn = data["isCheckedIn"] as bool;
     startAddress = (data["startAddress"] as String);
     _currentFieldForceId = data["fieldForceId"] as int?;
-
+    print("isCheckedIn,$isCheckedIn");
+    print("startAddress,$startAddress");
+    print("_currentFieldForceId,$_currentFieldForceId");
     _restored = true;
     isHydrating = false;
     notifyListeners();
@@ -225,7 +225,7 @@ class JourneyProviderView extends ChangeNotifier {
   // }
 
   Future<ll.LatLng> _getLatLng() async {
-    // 1) GPS service ON?
+
     bool serviceEnabled = await _location.serviceEnabled();
     if (!serviceEnabled) {
       serviceEnabled = await _location.requestService();
@@ -234,7 +234,7 @@ class JourneyProviderView extends ChangeNotifier {
       }
     }
 
-    // 2) Permission granted?
+
     var permission = await _location.hasPermission();
     if (permission == loc.PermissionStatus.denied) {
       permission = await _location.requestPermission();
@@ -245,7 +245,7 @@ class JourneyProviderView extends ChangeNotifier {
       throw Exception("Location permission denied. Please allow location permission.");
     }
 
-    // 3) Get location (with timeout)
+
     final data = await _location.getLocation().timeout(const Duration(seconds: 12));
 
     final lat = data.latitude;
@@ -348,9 +348,16 @@ class JourneyProviderView extends ChangeNotifier {
 
       if (rows.isNotEmpty && updateStatus) {
         final latestAction = (rows.first['action'] ?? '').toString().toUpperCase();
-        final bool serverStatus = latestAction.contains('IN');
+      //  final bool serverStatus = latestAction.contains('IN');
+        final bool serverStatus;
+        if (latestAction.contains('OUT')) {
+          serverStatus = false;
+        } else if (latestAction.contains('IN') || latestAction.contains('AUTO')) {
+          serverStatus = true;
+        } else {
 
-
+          serverStatus = isCheckedIn;
+        }
         isCheckedIn = serverStatus;
 
         if (isCheckedIn) {
@@ -374,8 +381,6 @@ class JourneyProviderView extends ChangeNotifier {
       notifyListeners();
     }
   }
-
-
 
   Duration get totalWorkedDuration {
     if (historyRows.isEmpty) return Duration.zero;
@@ -541,7 +546,7 @@ class _JourneyScreenState extends State<JourneyScreen> {
   @override
   void initState() {
     super.initState();
-    // Use addPostFrameCallback to ensure the provider is ready
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final auth = Provider.of<AuthProvider>(context, listen: false);
       final journey = Provider.of<JourneyProviderView>(context, listen: false);
@@ -707,11 +712,17 @@ class _JourneyScreenState extends State<JourneyScreen> {
         padding: EdgeInsets.symmetric(vertical: 80),
         children: [
 
-          _drawerItem(context, icon: Icons.home, title: "Employees", onTap: () {
+          _drawerItem(context, icon: Icons.person, title: "Employees", onTap: () {
             Navigator.push(context, MaterialPageRoute(builder: (context) => EmployeeListView()));
           }),
 
-          _drawerItem(context, icon: Icons.info, title: "About", onTap: () {}),
+          _drawerItem(context, icon: Icons.info, title: "Time Sheet", onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => const ProjectsTasksPage(),
+              ),
+            );
+          }),
           _drawerItem(context, icon: Icons.help_outline, title: "Query", onTap: () {}),
           _drawerItem(context, icon: Icons.share, title: "Share", onTap: () {}),
           _drawerItem(context, icon: Icons.privacy_tip, title: "Privacy policy", onTap: () {}),
@@ -1200,193 +1211,352 @@ class SwipeToAction extends StatefulWidget {
   State<SwipeToAction> createState() => _SwipeToActionState();
 }
 
+// class _SwipeToActionState extends State<SwipeToAction> {
+//   double _drag = 0.0;
+//   double _startX = 0.0;
+//   double _startDrag = 0.0;
+//   // @override
+//   // Widget build(BuildContext context) {
+//   //   final h = widget.isSmall ? 44.0 : 48.0;
+//   //   final knob = widget.isSmall ? 36.0 : 38.0;
+//   //   final maxDrag = (MediaQuery.of(context).size.width) - 32 /*screen padding approx*/ - 24 /*container padding*/ - knob;
+//   //
+//   //   final progress = (_drag / (maxDrag <= 1 ? 1 : maxDrag)).clamp(0.0, 1.0);
+//   //
+//   //   return GestureDetector(
+//   //     onHorizontalDragUpdate: widget.isLoading || widget.onSubmit == null
+//   //         ? null
+//   //         : (d) {
+//   //       setState(() {
+//   //         _drag = (_drag + d.delta.dx).clamp(0.0, maxDrag);
+//   //       });
+//   //     },
+//   //     onHorizontalDragEnd: widget.isLoading || widget.onSubmit == null
+//   //         ? null
+//   //         : (_) async {
+//   //
+//   //       if (progress >= 1) {
+//   //         widget.onSubmit?.call();
+//   //       }
+//   //
+//   //       setState(() => _drag = 0.0);
+//   //     },
+//   //     child: Container(
+//   //       height: h,
+//   //       decoration: BoxDecoration(
+//   //         color: const Color(0xFFEFF4FF),
+//   //         borderRadius: BorderRadius.circular(999),
+//   //         border: Border.all(color: const Color(0xFFD6E2FF)),
+//   //       ),
+//   //       padding: const EdgeInsets.symmetric(horizontal: 12),
+//   //       child: Stack(
+//   //         alignment: Alignment.centerLeft,
+//   //         children: [
+//   //
+//   //           Align(
+//   //             alignment: Alignment.center,
+//   //             child: Text(
+//   //               widget.isCheckedIn ? "Swipe to Check Out" : "Swipe to Check In",
+//   //               style: TextStyle(
+//   //                 color: const Color(0xFF1C2A4A),
+//   //                 fontWeight: FontWeight.w800,
+//   //                 fontSize: widget.isSmall ? 12 : 13,
+//   //               ),
+//   //             ),
+//   //           ),
+//   //
+//   //
+//   //           AnimatedAlign(
+//   //             duration: const Duration(milliseconds: 80),
+//   //             alignment: Alignment(-1 + (2 * progress), 0),
+//   //             child: Container(
+//   //               width: knob,
+//   //               height: knob,
+//   //               decoration: BoxDecoration(
+//   //                 color: widget.isCheckedIn
+//   //                     ? const Color(0xFFFF6B81)
+//   //                     : const Color(0xFF3A6BFF),
+//   //                 borderRadius: BorderRadius.circular(999),
+//   //               ),
+//   //               child: widget.isLoading
+//   //                   ? const Padding(
+//   //                 padding: EdgeInsets.all(10),
+//   //                 child: CircularProgressIndicator(
+//   //                   strokeWidth: 2,
+//   //                   color: Colors.white,
+//   //                 ),
+//   //               )
+//   //                   : Icon(
+//   //                 widget.isCheckedIn ? Icons.logout_rounded : Icons.arrow_forward_rounded,
+//   //                 color: Colors.white,
+//   //               ),
+//   //             ),
+//   //           ),
+//   //         ],
+//   //       ),
+//   //     ),
+//   //   );
+//   // }
+//
+//   late Future<bool> _locationOnFuture;
+//
+//   @override
+//   void initState() {
+//     super.initState();
+//     _locationOnFuture = Geolocator.isLocationServiceEnabled();
+//   }
+//
+//
+//   @override
+//   Widget build(BuildContext context) {
+//     final h = widget.isSmall ? 44.0 : 48.0;
+//     final knob = widget.isSmall ? 36.0 : 38.0;
+//     final maxDrag = (MediaQuery.of(context).size.width) -
+//         32 - 24 -
+//         knob;
+//
+//
+//     final progress = (_drag / (maxDrag <= 1 ? 1 : maxDrag)).clamp(0.0, 1.0);
+//
+//     return FutureBuilder<bool>(
+//       future: _locationOnFuture,
+//       builder: (context, snap) {
+//         final isLocationOn = snap.data ?? true;
+//         final blockSwipe = !isLocationOn && (widget.isCheckedIn || !widget.isCheckedIn);
+//
+//         final label = blockSwipe
+//             ? "Plz turn on the location"
+//             : (widget.isCheckedIn ? "Swipe to Check Out" : "Swipe to Check In");
+//
+//         return GestureDetector(
+//           onHorizontalDragUpdate: widget.isLoading || widget.onSubmit == null || blockSwipe
+//               ? null
+//               : (d) {
+//             setState(() {
+//               _drag = (_drag + d.delta.dx).clamp(0.0, maxDrag);
+//             });
+//           },
+//           onHorizontalDragEnd: widget.isLoading || widget.onSubmit == null || blockSwipe
+//               ? null
+//               : (_) async {
+//             if (progress >= 1) {
+//               widget.onSubmit?.call();
+//             }
+//             setState(() => _drag = 0.0);
+//           },
+//           child: Opacity(
+//             opacity: blockSwipe ? 0.55 : 1.0,
+//             child: Container(
+//               height: h,
+//               decoration: BoxDecoration(
+//                 color: const Color(0xFFEFF4FF),
+//                 borderRadius: BorderRadius.circular(999),
+//                 border: Border.all(color: const Color(0xFFD6E2FF)),
+//               ),
+//               padding: const EdgeInsets.symmetric(horizontal: 12),
+//               child: Stack(
+//                 alignment: Alignment.centerLeft,
+//                 children: [
+//                   Align(
+//                     alignment: Alignment.center,
+//                     child: Text(
+//                       label,
+//                       style: TextStyle(
+//                         color: blockSwipe ? Colors.red : const Color(0xFF1C2A4A),
+//                         fontWeight: FontWeight.w800,
+//                         fontSize: widget.isSmall ? 12 : 13,
+//                       ),
+//                     ),
+//                   ),
+//                   AnimatedAlign(
+//                     duration: const Duration(milliseconds: 80),
+//                     alignment: Alignment(-1 + (2 * progress), 0),
+//                     child: Container(
+//                       width: knob,
+//                       height: knob,
+//                       decoration: BoxDecoration(
+//                         color: blockSwipe
+//                             ? Colors.grey
+//                             : (widget.isCheckedIn
+//                             ? const Color(0xFFFF6B81)
+//                             : const Color(0xFF3A6BFF)),
+//                         borderRadius: BorderRadius.circular(999),
+//                       ),
+//                       child: widget.isLoading
+//                           ? const Padding(
+//                         padding: EdgeInsets.all(10),
+//                         child: CircularProgressIndicator(
+//                           strokeWidth: 2,
+//                           color: Colors.white,
+//                         ),
+//                       )
+//                           : Icon(
+//                         widget.isCheckedIn
+//                             ? Icons.logout_rounded
+//                             : Icons.arrow_forward_rounded,
+//                         color: Colors.white,
+//                       ),
+//                     ),
+//                   ),
+//                 ],
+//               ),
+//             ),
+//           ),
+//         );
+//
+//
+//       },
+//     );
+//   }
+//
+//
+// }
+
 class _SwipeToActionState extends State<SwipeToAction> {
   double _drag = 0.0;
+  double _startX = 0.0;
+  double _startDrag = 0.0;
+  late Future<bool> _locationOnFuture;
 
-  // @override
-  // Widget build(BuildContext context) {
-  //   final h = widget.isSmall ? 44.0 : 48.0;
-  //   final knob = widget.isSmall ? 36.0 : 38.0;
-  //   final maxDrag = (MediaQuery.of(context).size.width) - 32 /*screen padding approx*/ - 24 /*container padding*/ - knob;
-  //
-  //   final progress = (_drag / (maxDrag <= 1 ? 1 : maxDrag)).clamp(0.0, 1.0);
-  //
-  //   return GestureDetector(
-  //     onHorizontalDragUpdate: widget.isLoading || widget.onSubmit == null
-  //         ? null
-  //         : (d) {
-  //       setState(() {
-  //         _drag = (_drag + d.delta.dx).clamp(0.0, maxDrag);
-  //       });
-  //     },
-  //     onHorizontalDragEnd: widget.isLoading || widget.onSubmit == null
-  //         ? null
-  //         : (_) async {
-  //
-  //       if (progress >= 1) {
-  //         widget.onSubmit?.call();
-  //       }
-  //
-  //       setState(() => _drag = 0.0);
-  //     },
-  //     child: Container(
-  //       height: h,
-  //       decoration: BoxDecoration(
-  //         color: const Color(0xFFEFF4FF),
-  //         borderRadius: BorderRadius.circular(999),
-  //         border: Border.all(color: const Color(0xFFD6E2FF)),
-  //       ),
-  //       padding: const EdgeInsets.symmetric(horizontal: 12),
-  //       child: Stack(
-  //         alignment: Alignment.centerLeft,
-  //         children: [
-  //
-  //           Align(
-  //             alignment: Alignment.center,
-  //             child: Text(
-  //               widget.isCheckedIn ? "Swipe to Check Out" : "Swipe to Check In",
-  //               style: TextStyle(
-  //                 color: const Color(0xFF1C2A4A),
-  //                 fontWeight: FontWeight.w800,
-  //                 fontSize: widget.isSmall ? 12 : 13,
-  //               ),
-  //             ),
-  //           ),
-  //
-  //
-  //           AnimatedAlign(
-  //             duration: const Duration(milliseconds: 80),
-  //             alignment: Alignment(-1 + (2 * progress), 0),
-  //             child: Container(
-  //               width: knob,
-  //               height: knob,
-  //               decoration: BoxDecoration(
-  //                 color: widget.isCheckedIn
-  //                     ? const Color(0xFFFF6B81)
-  //                     : const Color(0xFF3A6BFF),
-  //                 borderRadius: BorderRadius.circular(999),
-  //               ),
-  //               child: widget.isLoading
-  //                   ? const Padding(
-  //                 padding: EdgeInsets.all(10),
-  //                 child: CircularProgressIndicator(
-  //                   strokeWidth: 2,
-  //                   color: Colors.white,
-  //                 ),
-  //               )
-  //                   : Icon(
-  //                 widget.isCheckedIn ? Icons.logout_rounded : Icons.arrow_forward_rounded,
-  //                 color: Colors.white,
-  //               ),
-  //             ),
-  //           ),
-  //         ],
-  //       ),
-  //     ),
-  //   );
-  // }
 
-  late Future<bool> _locationOnFuture;   // ✅ cache it once
+  Future<bool> _checkLocationStatus() async {
 
+    final location = loc.Location();
+
+    bool serviceEnabled = await location.serviceEnabled();
+    if (!serviceEnabled) {
+      serviceEnabled = await location.requestService();
+    }
+
+    return serviceEnabled;
+  }
   @override
   void initState() {
     super.initState();
-    _locationOnFuture = Geolocator.isLocationServiceEnabled(); // ✅ only once
+    _locationOnFuture = _checkLocationStatus();
   }
   @override
   Widget build(BuildContext context) {
     final h = widget.isSmall ? 44.0 : 48.0;
     final knob = widget.isSmall ? 36.0 : 38.0;
-    final maxDrag = (MediaQuery.of(context).size.width) -
-        32 - 24 -
-        knob;
-
-    final progress = (_drag / (maxDrag <= 1 ? 1 : maxDrag)).clamp(0.0, 1.0);
 
     return FutureBuilder<bool>(
       future: _locationOnFuture,
       builder: (context, snap) {
         final isLocationOn = snap.data ?? true;
-        final blockSwipe = !isLocationOn && (widget.isCheckedIn || !widget.isCheckedIn);
+        final blockSwipe = !isLocationOn;
 
         final label = blockSwipe
             ? "Plz turn on the location"
             : (widget.isCheckedIn ? "Swipe to Check Out" : "Swipe to Check In");
 
-        return GestureDetector(
-          onHorizontalDragUpdate: widget.isLoading || widget.onSubmit == null || blockSwipe
-              ? null
-              : (d) {
-            setState(() {
-              _drag = (_drag + d.delta.dx).clamp(0.0, maxDrag);
-            });
-          },
-          onHorizontalDragEnd: widget.isLoading || widget.onSubmit == null || blockSwipe
-              ? null
-              : (_) async {
-            if (progress >= 1) {
-              widget.onSubmit?.call();
-            }
-            setState(() => _drag = 0.0);
-          },
-          child: Opacity(
-            opacity: blockSwipe ? 0.55 : 1.0,
-            child: Container(
-              height: h,
-              decoration: BoxDecoration(
-                color: const Color(0xFFEFF4FF),
-                borderRadius: BorderRadius.circular(999),
-                border: Border.all(color: const Color(0xFFD6E2FF)),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: Stack(
-                alignment: Alignment.centerLeft,
-                children: [
-                  Align(
-                    alignment: Alignment.center,
-                    child: Text(
-                      label,
-                      style: TextStyle(
-                        color: blockSwipe ? Colors.red : const Color(0xFF1C2A4A),
-                        fontWeight: FontWeight.w800,
-                        fontSize: widget.isSmall ? 12 : 13,
-                      ),
-                    ),
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            // container padding 12+12 = 24
+            final maxDrag =
+            (constraints.maxWidth - 24 - knob).clamp(0.0, double.infinity);
+
+            final progress =
+            (_drag / (maxDrag <= 1 ? 1 : maxDrag)).clamp(0.0, 1.0);
+
+            return GestureDetector(
+              behavior: HitTestBehavior.opaque,
+
+              onHorizontalDragStart:
+              widget.isLoading || widget.onSubmit == null || blockSwipe
+                  ? null
+                  : (d) {
+                _startX = d.localPosition.dx;
+                _startDrag = _drag;
+              },
+
+              onHorizontalDragUpdate:
+              widget.isLoading || widget.onSubmit == null || blockSwipe
+                  ? null
+                  : (d) {
+                final dx = d.localPosition.dx - _startX;
+                setState(() {
+                  _drag = (_startDrag + dx).clamp(0.0, maxDrag);
+                });
+              },
+
+              onHorizontalDragEnd:
+              widget.isLoading || widget.onSubmit == null || blockSwipe
+                  ? null
+                  : (details) async {
+                final vx = details.velocity.pixelsPerSecond.dx;
+                final shouldComplete = progress >= 0.98 || vx > 900;
+
+                if (shouldComplete) {
+                  setState(() => _drag = maxDrag);
+                   widget.onSubmit?.call();
+                }
+
+                setState(() => _drag = 0.0);
+              },
+
+              child: Opacity(
+                opacity: blockSwipe ? 0.55 : 1.0,
+                child: Container(
+                  height: h,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEFF4FF),
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(color: const Color(0xFFD6E2FF)),
                   ),
-                  AnimatedAlign(
-                    duration: const Duration(milliseconds: 80),
-                    alignment: Alignment(-1 + (2 * progress), 0),
-                    child: Container(
-                      width: knob,
-                      height: knob,
-                      decoration: BoxDecoration(
-                        color: blockSwipe
-                            ? Colors.grey
-                            : (widget.isCheckedIn
-                            ? const Color(0xFFFF6B81)
-                            : const Color(0xFF3A6BFF)),
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                      child: widget.isLoading
-                          ? const Padding(
-                        padding: EdgeInsets.all(10),
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Stack(
+                    alignment: Alignment.centerLeft,
+                    children: [
+                      Align(
+                        alignment: Alignment.center,
+                        child: Text(
+                          label,
+                          style: TextStyle(
+                            color: blockSwipe
+                                ? Colors.red
+                                : const Color(0xFF1C2A4A),
+                            fontWeight: FontWeight.w800,
+                            fontSize: widget.isSmall ? 12 : 13,
+                          ),
                         ),
-                      )
-                          : Icon(
-                        widget.isCheckedIn
-                            ? Icons.logout_rounded
-                            : Icons.arrow_forward_rounded,
-                        color: Colors.white,
                       ),
-                    ),
+                      AnimatedAlign(
+                        duration: const Duration(milliseconds: 80),
+                        alignment: Alignment(-1 + (2 * progress), 0),
+                        child: Container(
+                          width: knob,
+                          height: knob,
+                          decoration: BoxDecoration(
+                            color: blockSwipe
+                                ? Colors.grey
+                                : (widget.isCheckedIn
+                                ? const Color(0xFFFF6B81)
+                                : const Color(0xFF3A6BFF)),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: widget.isLoading
+                              ? const Padding(
+                            padding: EdgeInsets.all(10),
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                              : Icon(
+                            widget.isCheckedIn
+                                ? Icons.logout_rounded
+                                : Icons.arrow_forward_rounded,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
-            ),
-          ),
+            );
+          },
         );
       },
     );

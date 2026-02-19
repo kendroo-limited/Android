@@ -6,6 +6,10 @@ import '../provider/project_provider.dart';
 import '../provider/task_provider.dart';
 import '../model/project_model.dart';
 import '../model/task_model.dart';
+import 'create_new_task.dart' hide TaskProvider;
+
+
+
 
 class ProjectsTasksPage extends StatefulWidget {
   const ProjectsTasksPage({super.key});
@@ -33,22 +37,52 @@ class _ProjectsTasksPageState extends State<ProjectsTasksPage>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Projects & Tasks"),
+        title: const Text("Tasks"),
         centerTitle: true,
         bottom: TabBar(
           controller: _tab,
           labelStyle: const TextStyle(fontWeight: FontWeight.bold),
           tabs: const [
-            Tab(text: "Projects"),
-            Tab(text: "Tasks"),
+Text("Tasks",style:TextStyle(
+    color: Color(0xFF77A6FF)
+))
+            // Tab(text: "Tasks",style:TextStyle(
+            //   color: Color(0xFF77A6FF)
+            // )),
           ],
         ),
+          actions: [
+          InkWell(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const NewTaskCreatePage()),
+            );
+    },
+      borderRadius: BorderRadius.circular(6),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: const Color(0xFF77A6FF),
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: const Text(
+          "New",
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w600,
+            fontSize: 12,
+          ),
+        ),
+      ),
+    )
+          ],
       ),
 
       body: TabBarView(
         controller: _tab,
         children: [
-          _ProjectsTab(),
+
           _TasksTab(),
         ],
       ),

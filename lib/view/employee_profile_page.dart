@@ -600,6 +600,8 @@ class EmployeeProfileProvider extends ChangeNotifier {
 
     }
   }
+
+
 }
 
 
@@ -775,7 +777,19 @@ class _MyProfilePageState extends State<MyProfilePage> {
     final sectionFont = isTablet ? 20.0 : 18.0;
 
     return Scaffold(
-      appBar: AppBar(title: const Text("My Profile"), centerTitle: true),
+      appBar: AppBar(title: const Text("My Profile"), centerTitle: true,
+      actions: [
+          ElevatedButton(
+          onPressed: () async {
+    await Provider.of<AuthProvider>(context, listen: false)
+        .logout(context);
+    },
+      child: const Image(
+        image: AssetImage('assets/icon/logout.png'),
+      ),
+    ),
+        ],
+      ),
       body: SafeArea(
         child: Consumer<EmployeeProfileProvider>(
           builder: (context, p, _) {

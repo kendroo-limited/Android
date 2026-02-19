@@ -38,7 +38,6 @@ class TaskRepository {
       final looksHtml =
           body.startsWith('<!DOCTYPE') || body.startsWith('<html');
 
-      // Fallback to demo tasks if server returns HTML or non-JSON
       if (res.statusCode != 200 ||
           !contentType.contains('application/json') ||
           looksHtml) {
@@ -112,7 +111,7 @@ class TaskRepository {
     }
   }
 
-  /// Update status (e.g. mark done)
+
   Future<bool> updateTaskStatus({
     required int taskId,
     required String status,
@@ -152,7 +151,7 @@ class TaskRepository {
     }
   }
 
-  /// Local demo tasks – used when backend fails / during UI dev
+
   List<Task> _demoTasks() {
     return [
       Task(
