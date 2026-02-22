@@ -129,6 +129,28 @@ class OdooSessionRpc {
     return DateTime.tryParse(timeStr.replaceFirst(' ', 'T'));
   }
 
+  Future<int> create({
+    required String model,
+    required Map<String, dynamic> values,
+    Map<String, dynamic> context = const {},
+  }) async {
+    final result = await callKw(
+      model: model,
+      method: "create",
+      args: [values],
+      kwargs: {
+        "context": context,
+      },
+    );
+
+    if (result is int) return result;
+
+
+    final parsed = int.tryParse(result?.toString() ?? "");
+    if (parsed != null) return parsed;
+
+    throw Exception("Create failed: unexpected result: $result");
+  }
 
   Future<List<Map<String, dynamic>>> fetchLatestJourneyHistoryForUser({
     required int uid,

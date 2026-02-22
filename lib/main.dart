@@ -5,13 +5,14 @@ import 'package:field_force_2/provider/chat_provider.dart';
 import 'package:field_force_2/provider/journey_provider.dart';
 import 'package:field_force_2/provider/leave_provider.dart';
 import 'package:field_force_2/provider/project_provider.dart';
-import 'package:field_force_2/provider/task_provider.dart';
+
 import 'package:field_force_2/repo/chat_repository.dart';
 import 'package:field_force_2/repo/journey_repository.dart';
 import 'package:field_force_2/repo/leave_repository.dart';
 import 'package:field_force_2/repo/memory_chat_repository.dart';
 import 'package:field_force_2/repo/project_repository.dart';
 import 'package:field_force_2/repo/task_repository.dart';
+import 'package:field_force_2/view/create_new_task.dart';
 import 'package:field_force_2/view/dashboard.dart';
 import 'package:field_force_2/view/employee/all_employee_page.dart';
 import 'package:field_force_2/view/employee_profile_page.dart';
@@ -32,8 +33,6 @@ import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:latlong2/latlong.dart' as ll;
 import 'package:location/location.dart' as loc;
 import 'package:provider/provider.dart';
-
-
 
 
 Future<void> main() async {
@@ -152,17 +151,19 @@ Future<void> main() async {
                   sessionCookie: auth.sessionCookie ?? '',
                 )),
           ),
-          ChangeNotifierProxyProvider<AuthProvider, TaskProvider>(
-            create: (_) => TaskProvider(
-              repository: TaskRepository(baseUrl: "", sessionCookie: ""),
-            ),
-            update: (_, auth, previous) => TaskProvider(
-              repository: TaskRepository(
-                baseUrl:url,
-                sessionCookie: auth.sessionCookie ?? "",
-              ),
-            ),
-          ),
+
+          // ChangeNotifierProxyProvider<AuthProvider, TaskProvider>(
+          //   create: (_) => TaskProvider(
+          //     repository: TaskRepository(baseUrl: "", sessionCookie: ""),
+          //   ),
+          //   update: (_, auth, previous) => TaskProvider(
+          //     repository: TaskRepository(
+          //       baseUrl:url,
+          //       sessionCookie: auth.sessionCookie ?? "",
+          //     ),
+          //   ),
+          // ),
+
           ChangeNotifierProxyProvider<AuthProvider, ProjectProvider>(
             create: (_) => ProjectProvider(
               repository: ProjectRepository(baseUrl: "", sessionCookie: ""),
@@ -178,6 +179,8 @@ Future<void> main() async {
           ChangeNotifierProvider(create: (_) => EmployeeProviderView()),
           ChangeNotifierProvider(create: (_) => EmployeeProfileProvider()),
           ChangeNotifierProvider(create: (_) => journey),
+
+          ChangeNotifierProvider(create: (_) => TaskProvider()),
         ],
         child: const MyApp(), )
      );
@@ -187,7 +190,6 @@ Future<void> main() async {
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
-
 
   @override
   Widget build(BuildContext context) {

@@ -329,15 +329,13 @@ class _NewTaskCreatePageState extends State<NewTaskCreatePage> {
     });
   }
 
-  // String _formatDT(DateTime dt) {
-  //   final hh = dt.hour.toString().padLeft(2, '0');
-  //   final mm = dt.minute.toString().padLeft(2, '0');
-  //   return "${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}  $hh:$mm";
-  //
-  // }
   String _formatDT(DateTime dt) {
-    return "${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}";
+    final hh = dt.hour.toString().padLeft(2, '0');
+    final mm = dt.minute.toString().padLeft(2, '0');
+    return "${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}  $hh:$mm";
+
   }
+
 
   Future<void> _pickProject() async {
     final auth = context.read<AuthProvider>();

@@ -579,7 +579,7 @@ class EmployeeProfileProvider extends ChangeNotifier {
       ];
 
       final rows = await _rpc(cookie).searchRead(
-        model: 'project.project',
+        model: '',
         domain: [['id', '=', uid]],
         fields: fields,
         limit: 1,

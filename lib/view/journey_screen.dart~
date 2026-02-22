@@ -728,7 +728,7 @@ class _JourneyScreenState extends State<JourneyScreen> {
           _drawerItem(context, icon: Icons.help_outline, title: "Query", onTap: () {}),
           _drawerItem(context, icon: Icons.share, title: "Share", onTap: () {}),
           _drawerItem(context, icon: Icons.privacy_tip, title: "Privacy policy", onTap: () {}),
-          _drawerItem(context, icon: Icons.logout, title: "Log out", onTap: () {
+          _drawerItem(context, icon: Icons.logout, title: "Privacy policy", onTap: () {
 
                Provider.of<AuthProvider>(context, listen: false)
                   .logout(context);

@@ -438,7 +438,7 @@
 
 
 import 'package:field_force_2/view/products/all_products_page.dart';
-import 'package:field_force_2/view/projects_tasks_page.dart';
+
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:latlong2/latlong.dart' as ll;
@@ -446,6 +446,7 @@ import 'package:provider/provider.dart';
 import 'package:location/location.dart' as loc;
 import '../provider/auth_provider.dart';
 import 'attendance_view.dart';
+import 'create_new_task.dart';
 import 'customer/all_customers_page.dart';
 import 'discuss/inbox_page.dart';
 import 'employee/all_employee_page.dart';
@@ -464,7 +465,7 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   bool _isCheckedIn = false;
 
-  // Location plugin instance
+
   final loc.Location _location = loc.Location();
   final List<LatLng> _checkInLocations = [];
 
@@ -739,7 +740,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             onTap: () {
                               Navigator.of(context).push(
                                 MaterialPageRoute(
-                                  builder: (_) => const ProjectsTasksPage(),
+                                  builder: (_) => const NewTaskCreatePage(),
                                 ),
                               );
                             },
