@@ -1,12 +1,10 @@
 import 'dart:async';
-import 'dart:convert';
-import 'dart:ui';
+
 import 'package:field_force_2/provider/chat_provider.dart';
+import 'package:field_force_2/provider/employee_provider.dart';
 import 'package:field_force_2/provider/journey_provider.dart';
 import 'package:field_force_2/provider/leave_provider.dart';
 import 'package:field_force_2/provider/project_provider.dart';
-
-import 'package:field_force_2/repo/chat_repository.dart';
 import 'package:field_force_2/repo/journey_repository.dart';
 import 'package:field_force_2/repo/leave_repository.dart';
 import 'package:field_force_2/repo/memory_chat_repository.dart';
@@ -23,7 +21,7 @@ import 'package:field_force_2/provider/all_employee_provider.dart';
 import 'package:field_force_2/provider/attendance_provider.dart';
 import 'package:field_force_2/provider/auth_provider.dart';
 import 'package:field_force_2/provider/customer_provider.dart';
-import 'package:field_force_2/provider/employee_provider.dart';
+
 import 'package:field_force_2/provider/product_provider.dart';
 import 'package:field_force_2/repo/all_employee_repository.dart';
 import 'package:field_force_2/repo/attendance_repository.dart';

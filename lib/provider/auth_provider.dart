@@ -28,7 +28,7 @@ String? database;
       debugPrint("❗ No session found, login needed");
       _isLoading = false;
       notifyListeners();
-      return; // Stay on login page
+      return;
     }
 
     debugPrint("✅ Found stored cookie: $sessionCookie");

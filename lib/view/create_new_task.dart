@@ -51,7 +51,7 @@ class TaskProvider extends ChangeNotifier {
 
     try {
       final domain = <dynamic>[
-        ['allow_timesheets', '=', true], // ✅ from tooltip
+        ['allow_timesheets', '=', true],
       ];
 
       if (query.trim().isNotEmpty) {
@@ -59,7 +59,7 @@ class TaskProvider extends ChangeNotifier {
       }
 
       final ctx = <String, dynamic>{
-        if (onlyMyProjects) 'search_default_my_projects': true, // ✅ from tooltip
+        if (onlyMyProjects) 'search_default_my_projects': true,
       };
 
       final rows = await _rpc(cookie).searchRead(
@@ -502,7 +502,7 @@ class _NewTaskCreatePageState extends State<NewTaskCreatePage> {
                       Expanded(
                         child: Text(
                           _selectedDateTime == null
-                              ? "Select date & time"
+                              ? "Select date"
                               : _formatDT(_selectedDateTime!),
                           style: TextStyle(
                             fontSize: 14,

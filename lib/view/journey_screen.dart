@@ -1,12 +1,10 @@
 import 'dart:async';
 import 'dart:math';
-
-
+import 'package:field_force_2/view/privacy_policy_screen.dart';
 import 'package:field_force_2/view/task_view_page.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart' as ll;
 import 'package:location/location.dart' as loc;
 import 'package:provider/provider.dart';
@@ -15,7 +13,6 @@ import '../model/journey_model.dart';
 import '../provider/auth_provider.dart';
 import '../repo/odoo_json_rpc.dart';
 import '../services/background_journey_service.dart';
-
 import 'employee/all_employee_page.dart';
 import 'employee_profile_page.dart';
 import 'journey_map_screen.dart';
@@ -417,7 +414,7 @@ class JourneyProviderView extends ChangeNotifier {
 
       if (isOut && lastCheckIn != null && t.isAfter(lastCheckIn!)) {
         totalSeconds += t.difference(lastCheckIn!).inSeconds;
-        lastCheckIn = null; // reset for next session
+        lastCheckIn = null;
       }
     }
 
@@ -633,10 +630,10 @@ class _JourneyScreenState extends State<JourneyScreen> {
                         ? null
                         : () => journey.handleCheckInOut(auth.sessionCookie!, auth.user!.uid),
                   ),
-                  Text(
-                    "Hydrating: ${journey.isHydrating} | Saving: ${journey.isSaving}",
-                    style: const TextStyle(fontSize: 12, color: Colors.red),
-                  ),
+                  // Text(
+                  //   "Hydrating: ${journey.isHydrating} | Saving: ${journey.isSaving}",
+                  //   style: const TextStyle(fontSize: 12, color: Colors.red),
+                  // ),
                   const SizedBox(height: 14),
 
                   Text(
@@ -725,9 +722,15 @@ class _JourneyScreenState extends State<JourneyScreen> {
               ),
             );
           }),
-          _drawerItem(context, icon: Icons.help_outline, title: "Query", onTap: () {}),
-          _drawerItem(context, icon: Icons.share, title: "Share", onTap: () {}),
-          _drawerItem(context, icon: Icons.privacy_tip, title: "Privacy policy", onTap: () {}),
+
+          // _drawerItem(context, icon: Icons.share, title: "Share", onTap: () {}),
+          _drawerItem(context, icon: Icons.privacy_tip, title: "Privacy policy", onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => const PrivacyPolicyScreen(),
+              ),
+            );
+          }),
           _drawerItem(context, icon: Icons.logout, title: "Log out", onTap: () {
 
                Provider.of<AuthProvider>(context, listen: false)
@@ -856,7 +859,7 @@ class _JourneyScreenState extends State<JourneyScreen> {
     final month = const ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][now.month - 1];
 
     final checkInTime = _latestTimeText(journey, wantIn: false);
-    final checkOutTime = _latestTimeText(journey, wantIn: true);
+    final checkOutTime = _latestTimeText(journey, wantIn: false);
 
     return Container(
       decoration: BoxDecoration(
@@ -929,13 +932,13 @@ class _JourneyScreenState extends State<JourneyScreen> {
                           alignLeft: true,
                         ),
                       ),
-                      const SizedBox(width: 10),
+                      const SizedBox(width: 90),
                       Expanded(
                         child: _inOutMini(
                           isSmall: isSmall,
                           label: "Check OUT",
                           timeText: checkOutTime,
-                          alignLeft: false,
+                          alignLeft: true,
                         ),
                       ),
                       if (journey.isCheckedIn) ...[
@@ -1459,7 +1462,7 @@ class _SwipeToActionState extends State<SwipeToAction> {
 
         return LayoutBuilder(
           builder: (context, constraints) {
-            // container padding 12+12 = 24
+
             final maxDrag =
             (constraints.maxWidth - 24 - knob).clamp(0.0, double.infinity);
 

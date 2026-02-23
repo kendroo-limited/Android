@@ -558,7 +558,7 @@ class EmployeeProfileProvider extends ChangeNotifier {
   }) async {
     loading = true;
     status = "Loading...";
-    notifyListeners();
+ //   notifyListeners();
 
     try {
       final fields = <String>[
@@ -579,7 +579,7 @@ class EmployeeProfileProvider extends ChangeNotifier {
       ];
 
       final rows = await _rpc(cookie).searchRead(
-        model: 'project.project',
+        model: 'res.users',
         domain: [['id', '=', uid]],
         fields: fields,
         limit: 1,
@@ -738,18 +738,34 @@ class MyProfilePage extends StatefulWidget {
 
 class _MyProfilePageState extends State<MyProfilePage> {
 
+  // @override
+  // void initState() {
+  //   super.initState();
+  //
+  //   final auth = Provider.of<AuthProvider>(context, listen: false);
+  //   final cookie = auth.sessionCookie ?? '';
+  //   final uid = auth.user?.uid;
+  //
+  //   if (cookie.isNotEmpty && uid != null) {
+  //     Provider.of<EmployeeProfileProvider>(context, listen: false)
+  //         .fetchMyProfile(cookie: cookie, uid: uid);
+  //   }
+  // }
+
   @override
   void initState() {
     super.initState();
 
-    final auth = Provider.of<AuthProvider>(context, listen: false);
-    final cookie = auth.sessionCookie ?? '';
-    final uid = auth.user?.uid;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final auth = context.read<AuthProvider>();
+      final cookie = auth.sessionCookie ?? '';
+      final uid = auth.user?.uid;
 
-    if (cookie.isNotEmpty && uid != null) {
-      Provider.of<EmployeeProfileProvider>(context, listen: false)
-          .fetchMyProfile(cookie: cookie, uid: uid);
-    }
+      if (cookie.isNotEmpty && uid != null) {
+        context.read<EmployeeProfileProvider>()
+            .fetchMyProfile(cookie: cookie, uid: uid);
+      }
+    });
   }
 
   Uint8List? base64ToImage(dynamic base64String) {
