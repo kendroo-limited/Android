@@ -91,9 +91,12 @@ class JourneyProviderView extends ChangeNotifier {
   bool isCheckedIn = false;
   String? startAddress;
   String? endAddress;
-
+  bool loadingTimes = false;
+  String? timeError;
   bool _restored = false;
   bool _hasFetchedInitial = false;
+  String checkInTimeText = "00:00 am";
+  String checkOutTimeText = "00:00 am";
 
   Timer? _autoTimer;
   List<Map<String, dynamic>> historyRows = [];
@@ -123,10 +126,28 @@ class JourneyProviderView extends ChangeNotifier {
     await restoreFromCache();
     try {
       await fetchHistory(cookie, uid, updateStatus: true);
-
+      await loadLatestCheckInOutTimes(cookie:cookie!,employeeId: uid,);
     } catch (e) {
       print("Background sync failed, but we have cache: $e");
     }
+  }
+
+  Future<int?> getEmployeeIdFromUser({
+    required String cookie,
+    required int uid,
+  }) async {
+    final result = await _rpc(cookie).searchRead(
+      model: "hr.employee",
+      domain: [
+        ["user_id", "=", uid],
+      ],
+      fields: ["id", "name"],
+      limit: 1,
+    );
+
+    if (result.isEmpty) return null;
+
+    return result.first["id"] as int;
   }
 
 
@@ -214,6 +235,77 @@ class JourneyProviderView extends ChangeNotifier {
       notifyListeners();
     }
   }
+
+  Future<void> loadLatestCheckInOutTimes({
+    required String cookie,
+    required int employeeId,
+  }) async {
+    loadingTimes = true;
+    timeError = null;
+    notifyListeners();
+
+    final hrEmployeeId = await getEmployeeIdFromUser(
+      cookie: cookie,
+      uid: employeeId,
+    );
+
+    try {
+      final rows = await _rpc(cookie).searchRead(
+        model: "kio.field.force",
+        domain: [
+          ["employee_id", "=", hrEmployeeId],
+        ],
+        fields: ["id", "check_in_time", "check_out_time"],
+        order: "id desc",
+        limit: 1,
+      );
+
+      if (rows.isEmpty) {
+        checkInTimeText = "01:00 am";
+        checkOutTimeText = "01:00 am";
+        return;
+      }
+
+      final r = rows.first;
+      final inRaw = r["check_in_time"];
+      final outRaw = r["check_out_time"];
+
+      checkInTimeText = _fmtOdooDateTimeToUi(inRaw) ?? "00:00 am";
+      checkOutTimeText = _fmtOdooDateTimeToUi(outRaw) ?? "00:00 am";
+    } catch (e) {
+      timeError = e.toString();
+      checkInTimeText = "00:00 am";
+      checkOutTimeText = "00:00 am";
+    } finally {
+      loadingTimes = false;
+      notifyListeners();
+    }
+  }
+
+  String? _fmtOdooDateTimeToUi(dynamic value) {
+    if (value == null || value == false) return null;
+
+    final s = value.toString().trim();
+    if (s.isEmpty || s.toLowerCase() == "false") return null;
+
+    DateTime? dt;
+    try {
+      final normalized = s.replaceFirst(' ', 'T');
+      dt = DateTime.tryParse(normalized);
+    } catch (_) {
+      dt = null;
+    }
+    if (dt == null) return s;
+
+
+    final h = dt.hour;
+    final m = dt.minute.toString().padLeft(2, '0');
+    final isPm = h >= 12;
+    final hh = ((h + 11) % 12) + 1; // 0->12, 13->1
+    final ampm = isPm ? "PM" : "AM";
+    return "$hh:$m $ampm";
+  }
+
 
   // Future<ll.LatLng> _getLatLng() async {
   //   final data = await _location.getLocation();
@@ -422,8 +514,6 @@ class JourneyProviderView extends ChangeNotifier {
   }
   Duration get totalWorkedDurationIncludingRunning {
     final base = totalWorkedDuration;
-
-
     final lastIn = _lastCheckInTime();
     if (isCheckedIn && lastIn != null) {
       return base + DateTime.now().difference(lastIn);
@@ -450,8 +540,101 @@ class JourneyProviderView extends ChangeNotifier {
     }
     return null;
   }
+  DateTime? _lastActionAt;
+
+  bool _cooldownActive() {
+    final now = DateTime.now();
+    if (_lastActionAt != null &&
+        now.difference(_lastActionAt!) < const Duration(seconds: 2)) {
+      return true;
+    }
+    _lastActionAt = now;
+    return false;
+  }
+  // Future<void> handleCheckInOut(String cookie, int uid) async {
+  //   if (isSaving) return;
+  //
+  //   isSaving = true;
+  //   locationStatus = "Fetching GPS...";
+  //   notifyListeners();
+  //
+  //   try {
+  //     final point = await _getLatLng().timeout(const Duration(seconds: 12));
+  //     locationStatus = "Step 2/3: Getting address...";
+  //     notifyListeners();
+  //
+  //     final address = await getAddressFromLatLng(point).timeout(const Duration(seconds: 10));
+  //     locationStatus = "Step 3/3: Sending to server...";
+  //     notifyListeners();
+  //     final rpc = _rpc(cookie);
+  //
+  //     if (!isCheckedIn) {
+  //       final ffId = await rpc.checkInCreateOrUpdate(
+  //         uid: uid,
+  //         startLocation: address,
+  //         latitude: point.latitude,
+  //         longitude: point.longitude,
+  //         journeyTime: DateTime.now(),
+  //       ).timeout(const Duration(seconds: 20));
+  //
+  //       startAddress = address;
+  //       endAddress = null;
+  //       isCheckedIn = true;
+  //       _currentFieldForceId = ffId;
+  //       locationStatus = "Check-in saved ✅";
+  //       historyRows.clear();
+  //       _sessionClosed = false;
+  //
+  //       await _saveCache(checkInTime: DateTime.now().toIso8601String());
+  //
+  //       await BackgroundJourneyService.start(
+  //         cookie: cookie,
+  //         uid: uid,
+  //         baseUrl: "http://192.168.50.10:8017",
+  //       );
+  //
+  //       startAutoUpdates(cookie, uid);
+  //       locationStatus = "Check-in saved ✅";
+  //     } else {
+  //       await rpc.fieldForceCheckOut(
+  //         uid: uid,
+  //         endLocation: address,
+  //         latitude: point.latitude,
+  //         longitude: point.longitude,
+  //         journeyTime: DateTime.now(),
+  //       ).timeout(const Duration(seconds: 20));
+  //
+  //       stopAutoUpdates();
+  //       await BackgroundJourneyService.stop();
+  //
+  //       endAddress = address;
+  //       isCheckedIn = false;
+  //       _currentFieldForceId = null;
+  //       locationStatus = "Check-out saved ✅";
+  //
+  //       historyRows.clear();
+  //       _sessionClosed = true;
+  //
+  //       await _saveCache(checkInTime: "");
+  //
+  //       locationStatus = "Check-out saved ✅";
+  //     }
+  //
+  //     notifyListeners();
+  //     await fetchHistory(cookie, uid, updateStatus: false);
+  //   } catch (e) {
+  //     locationStatus = "Error: $e";
+  //   } finally {
+  //     isSaving = false;
+  //     notifyListeners();
+  //   }
+  // }
+
   Future<void> handleCheckInOut(String cookie, int uid) async {
     if (isSaving) return;
+    if (_cooldownActive()) return;
+
+    final shouldCheckIn = !isCheckedIn;
 
     isSaving = true;
     locationStatus = "Fetching GPS...";
@@ -465,9 +648,11 @@ class JourneyProviderView extends ChangeNotifier {
       final address = await getAddressFromLatLng(point).timeout(const Duration(seconds: 10));
       locationStatus = "Step 3/3: Sending to server...";
       notifyListeners();
+
       final rpc = _rpc(cookie);
 
-      if (!isCheckedIn) {
+      if (shouldCheckIn) {
+
         final ffId = await rpc.checkInCreateOrUpdate(
           uid: uid,
           startLocation: address,
@@ -480,7 +665,7 @@ class JourneyProviderView extends ChangeNotifier {
         endAddress = null;
         isCheckedIn = true;
         _currentFieldForceId = ffId;
-        locationStatus = "Check-in saved ✅";
+
         historyRows.clear();
         _sessionClosed = false;
 
@@ -493,8 +678,10 @@ class JourneyProviderView extends ChangeNotifier {
         );
 
         startAutoUpdates(cookie, uid);
+
         locationStatus = "Check-in saved ✅";
       } else {
+
         await rpc.fieldForceCheckOut(
           uid: uid,
           endLocation: address,
@@ -509,7 +696,6 @@ class JourneyProviderView extends ChangeNotifier {
         endAddress = address;
         isCheckedIn = false;
         _currentFieldForceId = null;
-        locationStatus = "Check-out saved ✅";
 
         historyRows.clear();
         _sessionClosed = true;
@@ -518,7 +704,7 @@ class JourneyProviderView extends ChangeNotifier {
 
         locationStatus = "Check-out saved ✅";
       }
-
+      await loadLatestCheckInOutTimes(cookie: cookie, employeeId: uid);
       notifyListeners();
       await fetchHistory(cookie, uid, updateStatus: false);
     } catch (e) {
@@ -550,7 +736,10 @@ class _JourneyScreenState extends State<JourneyScreen> {
       final auth = Provider.of<AuthProvider>(context, listen: false);
       final journey = Provider.of<JourneyProviderView>(context, listen: false);
       journey.init(auth.sessionCookie!, auth.user!.uid);
+       journey.loadLatestCheckInOutTimes(cookie:auth.sessionCookie!,employeeId: auth.user!.uid, );
     });
+
+
   }
 
 //class JourneyScreen extends StatelessWidget {
@@ -579,7 +768,15 @@ class _JourneyScreenState extends State<JourneyScreen> {
       drawer: _appDrawer(context),
       body: SafeArea(
         child: RefreshIndicator(
-          onRefresh: () => journey.fetchHistory(auth.sessionCookie!, auth.user!.uid),
+         // onRefresh: () => journey.fetchHistory(auth.sessionCookie!, auth.user!.uid),
+          onRefresh: () async {
+            // Refresh both history and the time badges
+            await journey.fetchHistory(auth.sessionCookie!, auth.user!.uid);
+            await journey.loadLatestCheckInOutTimes(
+              cookie: auth.sessionCookie!,
+              employeeId: auth.user!.uid,
+            );
+          },
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
             child: Padding(
@@ -858,8 +1055,8 @@ class _JourneyScreenState extends State<JourneyScreen> {
     final weekday = const ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][now.weekday - 1];
     final month = const ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][now.month - 1];
 
-    final checkInTime = _latestTimeText(journey, wantIn: false);
-    final checkOutTime = _latestTimeText(journey, wantIn: false);
+    final checkInTime = journey.checkInTimeText;
+    final checkOutTime = journey.checkOutTimeText;
 
     return Container(
       decoration: BoxDecoration(
@@ -941,24 +1138,24 @@ class _JourneyScreenState extends State<JourneyScreen> {
                           alignLeft: true,
                         ),
                       ),
-                      if (journey.isCheckedIn) ...[
-                        const SizedBox(width: 10),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFFC048),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Text(
-                            "00:05",
-                            style: TextStyle(
-                              fontWeight: FontWeight.w900,
-                              fontSize: isSmall ? 11 : 12,
-                              color: const Color(0xFF1C2A4A),
-                            ),
-                          ),
-                        ),
-                      ],
+                      // if (journey.isCheckedIn) ...[
+                      //   const SizedBox(width: 10),
+                      //   Container(
+                      //     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      //     decoration: BoxDecoration(
+                      //       color: const Color(0xFFFFC048),
+                      //       borderRadius: BorderRadius.circular(10),
+                      //     ),
+                      //     child: Text(
+                      //       "00:05",
+                      //       style: TextStyle(
+                      //         fontWeight: FontWeight.w900,
+                      //         fontSize: isSmall ? 11 : 12,
+                      //         color: const Color(0xFF1C2A4A),
+                      //       ),
+                      //     ),
+                      //   ),
+                      // ],
                     ],
                   ),
                   const SizedBox(height: 12),
@@ -1174,16 +1371,63 @@ class _JourneyScreenState extends State<JourneyScreen> {
   }
 
 
-  static String _latestTimeText(JourneyProviderView journey, {required bool wantIn}) {
-    final rows = journey.historyRows;
+  // static String _latestTimeText(JourneyProviderView journey, {required bool wantIn}) {
+  //   final rows = journey.historyRows;
+  //
+  //   for (final item in rows) {
+  //     final action = (item['action'] ?? '').toString().toUpperCase();
+  //     final isIn = action.contains('IN');
+  //     if ((wantIn && isIn) || (!wantIn && !isIn)) {
+  //       final t = (item['journey_time'] ?? '').toString();
+  //       if (t.isNotEmpty) return t;
+  //     }
+  //   }
+  //   return "00:00 am";
+  // }
+  // static String _latestTimeTextCheckOut(JourneyProviderView journey, {required bool wantOut}) {
+  //   final rows = journey.historyRows;
+  //
+  //   for (final item in rows) {
+  //     final action = (item['action'] ?? '').toString().toUpperCase();
+  //     final isOut = action.contains('OUT');
+  //     if ((wantOut && isOut) || (!wantOut && !isOut)) {
+  //       final t = (item['journey_time'] ?? '').toString();
+  //       if (t.isNotEmpty) return t;
+  //     }
+  //   }
+  //   return "00:00 am";
+  // }
 
+  static String latestInTime(JourneyProviderView journey) {
+    final rows = journey.historyRows;
     for (final item in rows) {
-      final action = (item['action'] ?? '').toString().toUpperCase();
-      final isIn = action.contains('IN');
-      if ((wantIn && isIn) || (!wantIn && !isIn)) {
-        final t = (item['journey_time'] ?? '').toString();
-        if (t.isNotEmpty) return t;
-      }
+      final action = (item['action'] ?? '').toString().trim().toUpperCase();
+
+      final isIn = action == 'CHECK IN' || action == 'IN' || action == 'CHECKIN';
+      if (!isIn) continue;
+
+      final raw = item['journey_time'];
+      if (raw == null || raw == false) continue;
+
+      final t = raw.toString();
+      if (t.isNotEmpty) return t;
+    }
+    return "00:00 am";
+  }
+
+  static String latestOutTime(JourneyProviderView journey) {
+    final rows = journey.historyRows;
+    for (final item in rows) {
+      final action = (item['action'] ?? '').toString().trim().toUpperCase();
+
+      final isOut = action == 'CHECK OUT' || action == 'OUT' || action == 'CHECKOUT';
+      if (!isOut) continue;
+
+      final raw = item['journey_time'];
+      if (raw == null || raw == false) continue;
+
+      final t = raw.toString();
+      if (t.isNotEmpty) return t;
     }
     return "00:00 am";
   }
