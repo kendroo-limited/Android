@@ -1,5 +1,5 @@
 import 'dart:async';
-
+import 'package:background_location_tracker/background_location_tracker.dart';
 import 'package:field_force_2/provider/chat_provider.dart';
 import 'package:field_force_2/provider/employee_provider.dart';
 import 'package:field_force_2/provider/journey_provider.dart';
@@ -8,10 +8,10 @@ import 'package:field_force_2/provider/project_provider.dart';
 import 'package:field_force_2/repo/journey_repository.dart';
 import 'package:field_force_2/repo/leave_repository.dart';
 import 'package:field_force_2/repo/memory_chat_repository.dart';
+import 'package:field_force_2/repo/odoo_json_rpc.dart';
 import 'package:field_force_2/repo/project_repository.dart';
-import 'package:field_force_2/repo/task_repository.dart';
+import 'package:field_force_2/services/background_journey_service.dart';
 import 'package:field_force_2/view/create_new_task.dart';
-import 'package:field_force_2/view/dashboard.dart';
 import 'package:field_force_2/view/employee/all_employee_page.dart';
 import 'package:field_force_2/view/employee_profile_page.dart';
 import 'package:field_force_2/view/journey_screen.dart';
@@ -21,49 +21,61 @@ import 'package:field_force_2/provider/all_employee_provider.dart';
 import 'package:field_force_2/provider/attendance_provider.dart';
 import 'package:field_force_2/provider/auth_provider.dart';
 import 'package:field_force_2/provider/customer_provider.dart';
-
 import 'package:field_force_2/provider/product_provider.dart';
 import 'package:field_force_2/repo/all_employee_repository.dart';
 import 'package:field_force_2/repo/attendance_repository.dart';
 import 'package:field_force_2/repo/customer_repository.dart';
 import 'package:field_force_2/repo/product_repository.dart';
-import 'package:flutter_foreground_task/flutter_foreground_task.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:provider/provider.dart';
+import 'package:flutter/widgets.dart';
+import 'dart:ui';
 import 'package:latlong2/latlong.dart' as ll;
 import 'package:location/location.dart' as loc;
-import 'package:provider/provider.dart';
+import 'package:geocoding/geocoding.dart';
+import 'globals.dart';
 
+
+OdooSessionRpc _bgRpc(String cookie, String baseUrl) {
+  return OdooSessionRpc(
+    baseUrl: baseUrl,
+    sessionCookie: cookie,
+  );
+}
+
+@pragma('vm:entry-point')
+void backgroundCallback() {
+  BackgroundLocationTrackerManager.handleBackgroundUpdated(
+        (data) async => BackgroundJourneyService.handleBackgroundUpdate(data),
+  );
+}
 
 Future<void> main() async {
-  String url = "https://demo.kendroo.com";
+  String url = "http://72.61.250.60:8069";
+ // String url = "http://192.168.50.92:8017";
   WidgetsFlutterBinding.ensureInitialized();
-  FlutterForegroundTask.init(
-    androidNotificationOptions: AndroidNotificationOptions(
-      channelId: 'location_channel',
-      channelName: 'Location Tracking',
-      channelDescription: 'Tracking location in background',
-      channelImportance: NotificationChannelImportance.LOW,
-      priority: NotificationPriority.LOW,
-      iconData: const NotificationIconData(
-        resType: ResourceType.mipmap,
-        resPrefix: ResourcePrefix.ic,
-        name: 'launcher',
+  await BackgroundLocationTrackerManager.initialize(
+    backgroundCallback,
+    config: const BackgroundLocationTrackerConfig(
+      loggingEnabled: true,
+      androidConfig: AndroidConfig(
+        notificationIcon: 'ic_launcher',
+        trackingInterval: Duration(seconds: 30),
+        distanceFilterMeters: null,
+
+
       ),
-    ),
-
-    iosNotificationOptions: const IOSNotificationOptions(
-      showNotification: true,
-      playSound: false,
-    ),
-
-    foregroundTaskOptions: const ForegroundTaskOptions(
-      interval: 900000, // 15 minutes
-      autoRunOnBoot: false,
-      allowWakeLock: true,
+      iOSConfig: IOSConfig(
+        distanceFilterMeters: null,
+        restartAfterKill: true,
+      ),
     ),
   );
 
+
   final journey = JourneyProviderView();
   await journey.restoreFromCache();
+
   runApp(
       MultiProvider(
         providers: [
@@ -185,13 +197,17 @@ Future<void> main() async {
 
 }
 
+@pragma('vm:entry-point')
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
+
     return MaterialApp(
+      navigatorKey: navigatorKey,
+
       title: 'Flutter Demo',
       theme: ThemeData(
         colorScheme: .fromSeed(seedColor: Colors.deepPurple),

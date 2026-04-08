@@ -5,7 +5,7 @@ import '../model/user_model.dart';
 
 
 class AuthRepository {
-  static const String _baseUrl = 'https://demo.kendroo.com';
+  static const String _baseUrl = 'http://72.61.250.60:8069';
 
   Future<OdooUser> login({
     required String db,

@@ -33,7 +33,7 @@ class EmployeeProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final url = Uri.parse('https://demo.kendroo.com/api/my/employee');
+      final url = Uri.parse('http://72.61.250.60:8069/api/my/employee');
       final cookie = auth!.sessionCookie!;
 
       final res = await http.post(
@@ -78,7 +78,7 @@ class EmployeeProvider extends ChangeNotifier {
       return;
     }
 
-    final fullUrl = 'https://demo.kendroo.com${emp.imageUrl}';
+    final fullUrl = 'http://72.61.250.60:8069${emp.imageUrl}';
     try {
       final imgRes = await http.get(
         Uri.parse(fullUrl),

@@ -34,7 +34,8 @@ String? database;
     debugPrint("✅ Found stored cookie: $sessionCookie");
 
     final res = await http.post(
-      Uri.parse("https://demo.kendroo.com/web/session/get_session_info"),
+      Uri.parse("http://72.61.250.60:8069/web/session/get_session_info"),
+    //  Uri.parse("http://192.168.50.92:8017/web/session/get_session_info"),
       headers: {
         "Content-Type": "application/json",
         "Cookie": sessionCookie!,
@@ -129,7 +130,8 @@ autologgeedin=true;
       sessionCookie = null;
       user = null;
 
-      final url = Uri.parse('https://demo.kendroo.com/web/session/authenticate');
+     final url = Uri.parse('http://72.61.250.60:8069/web/session/authenticate');
+    //  final url = Uri.parse('http://192.168.50.92:8017/web/session/authenticate');
 
       final res = await http.post(
         url,

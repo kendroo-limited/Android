@@ -16,7 +16,7 @@ class EmployeeProviderView extends ChangeNotifier {
 
   OdooSessionRpc _rpc(String cookie) {
     return OdooSessionRpc(
-      baseUrl: "https://demo.kendroo.com",
+      baseUrl: "http://72.61.250.60:8069",
       sessionCookie: cookie,
     );
   }

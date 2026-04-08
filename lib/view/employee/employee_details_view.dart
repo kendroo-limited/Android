@@ -311,7 +311,7 @@ class EmployeeDetailPage extends StatelessWidget {
     ImageProvider? avatarImage;
     if (imageUrl.isNotEmpty && imageUrl != '-') {
       avatarImage = NetworkImage(
-        "https://demo.kendroo.com$imageUrl",
+        "http://72.61.250.60:8069$imageUrl",
         headers: {"Cookie": sessionCookie},
       );
     }

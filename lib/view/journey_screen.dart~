@@ -108,8 +108,8 @@ class JourneyProviderView extends ChangeNotifier {
   bool isHydrating = true;
   OdooSessionRpc _rpc(String cookie) {
     return OdooSessionRpc(
-      baseUrl: "http://72.61.250.60:8069",
-    //  baseUrl: "http://192.168.50.92:8017",
+     // baseUrl: "http://72.61.250.60:8069",
+      baseUrl: "http://192.168.50.92:8017",
       sessionCookie: cookie,
     );
   }
@@ -730,8 +730,8 @@ class JourneyProviderView extends ChangeNotifier {
         await BackgroundJourneyService.start(
           cookie: cookie,
               fieldForceId: ffId,
-          baseUrl: "http://72.61.250.60:8069",
-        //  baseUrl: "http://192.168.50.92:8017",
+         // baseUrl: "http://72.61.250.60:8069",
+          baseUrl: "http://192.168.50.92:8017",
 
         );
 

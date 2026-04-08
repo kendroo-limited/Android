@@ -9,9 +9,6 @@ import '../model/project_model.dart';
 import '../model/task_model.dart';
 import 'create_new_task.dart';
 
-
-
-
 class ProjectsTasksPage extends StatefulWidget {
   const ProjectsTasksPage({super.key});
 

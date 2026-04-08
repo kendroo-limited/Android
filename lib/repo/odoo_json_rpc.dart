@@ -257,90 +257,6 @@ class OdooSessionRpc {
     return lineId as int;
   }
 
-  // Future<int> checkInCreateOrUpdate({
-  //   required int uid,
-  //   required String startLocation,
-  //   required double latitude,
-  //   required double longitude,
-  //   DateTime? journeyTime,
-  // }) async {
-  //   final employeeId = await getEmployeeId(uid);
-  //
-  //   final open = await callKw(
-  //     model: "kio.field.force",
-  //     method: "search_read",
-  //     args: [
-  //       [
-  //         ["employee_id", "=", employeeId],
-  //
-  //       ]
-  //     ],
-  //     kwargs: {
-  //       "fields": ["id", "start_location", "check_in_time", "end_location"],
-  //       "order": "id desc",
-  //       "limit": 1
-  //     },
-  //   );
-  //
-  //
-  //
-  //   final now = _toOdooDatetime(journeyTime ?? DateTime.now());
-  //
-  //   int fieldForceId;
-  //
-  //   if ((open as List).isEmpty) {
-  //
-  //
-  //
-  //     final newId = await callKw(
-  //       model: "kio.field.force",
-  //       method: "create",
-  //       args: [
-  //         {
-  //           "employee_id": employeeId,
-  //           "start_location": startLocation,
-  //           "check_in_time": now,
-  //         }
-  //       ],
-  //     );
-  //     fieldForceId = newId as int;
-  //
-  //
-  //   } else {
-  //
-  //       fieldForceId = open[0]["id"] as int;
-  //
-  //       final existingStart = open[0]["start_location"];
-  //       final existingCheckIn = open[0]["check_in_time"];
-  //
-  //       final valsToWrite = <String, dynamic>{};
-  //
-  //       final isEmptyStart = (existingStart == false ||
-  //           existingStart == null ||
-  //           (existingStart is String && existingStart
-  //               .trim()
-  //               .isEmpty));
-  //       final isEmptyCheckIn = (existingCheckIn == false ||
-  //           existingCheckIn == null);
-  //
-  //       if (isEmptyStart) valsToWrite["start_location"] = startLocation;
-  //       if (isEmptyCheckIn) valsToWrite["check_in_time"] = now;
-  //
-  //
-  //
-  //   }
-  //
-  //
-  //   await addJourneyHistoryLine(
-  //     fieldForceId: fieldForceId,
-  //     latitude: latitude,
-  //     longitude: longitude,
-  //     location: startLocation,
-  //     journeyTime: journeyTime,
-  //   );
-  //
-  //   return fieldForceId;
-  // }
 
   Future<int> checkInCreateOrUpdate({
     required int uid,
@@ -395,44 +311,6 @@ class OdooSessionRpc {
     return fieldForceId;
   }
 
-
-  // Future<void> fieldForceCheckOut({
-  //   required int uid,
-  //   required String endLocation,
-  //   required double latitude,
-  //   required double longitude,
-  //   DateTime? journeyTime,
-  // }) async {
-  //   final employeeId = await getEmployeeId(uid);
-  //
-  //   final open =
-  //   await callKw(
-  //     model: "kio.field.force",
-  //     method: "search_read",
-  //     args: [
-  //       [
-  //         ["employee_id", "=", employeeId],
-  //         // "|",
-  //         //   ["end_location", "=", false],
-  //         //   ["end_location", "=", ""],
-  //       ]
-  //     ],
-  //     kwargs: {
-  //       "fields": ["id", "check_out_time", "end_location"],
-  //       "order": "id desc",
-  //       "limit": 1
-  //     },
-  //   );
-  //
-  //   if ((open as List).isEmpty) {
-  //     throw Exception("No open journey found (already checked out / not checked in)");
-  //   }
-  //
-  //   final id = open[0]["id"] as int;
-  //   final now = _toOdooDatetime(journeyTime ?? DateTime.now());
-  //
-  //
-  // }
 
   Future<void> fieldForceCheckOut({
     required int uid,

@@ -15,7 +15,7 @@ class _OdooLoginPageState extends State<OdooLoginPage> {
   final _dbCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
-
+  final _urlCtrl = TextEditingController();
 
   void initState() {
     super.initState();
@@ -68,16 +68,25 @@ class _OdooLoginPageState extends State<OdooLoginPage> {
                     style: TextStyle(
                         fontSize: 22, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 24),
-
-                TextField(
-                  controller: _dbCtrl,
-                  decoration: InputDecoration(
-                    labelText: 'Database',
-                    border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(6)),
-                  ),
-                ),
-                const SizedBox(height: 16),
+               //  TextField(
+               //    controller: _urlCtrl,
+               // //   obscureText: true,
+               //    decoration: InputDecoration(
+               //      labelText: 'Url',
+               //      border: OutlineInputBorder(
+               //          borderRadius: BorderRadius.circular(6)),
+               //    ),
+               //  ),
+               //  const SizedBox(height: 16),
+               //  TextField(
+               //    controller: _dbCtrl,
+               //    decoration: InputDecoration(
+               //      labelText: 'Database',
+               //      border: OutlineInputBorder(
+               //          borderRadius: BorderRadius.circular(6)),
+               //    ),
+               //  ),
+               //  const SizedBox(height: 16),
 
                 TextField(
                   controller: _emailCtrl,
@@ -150,7 +159,7 @@ class _OdooLoginPageState extends State<OdooLoginPage> {
                         : () async {
                       try {
                         await auth.login(
-                          _dbCtrl.text.trim(),
+                          "sdi",
                           _emailCtrl.text.trim(),
                           _passCtrl.text,
                         );

@@ -378,6 +378,7 @@ class BackgroundJourneyService {
         return;
       }
 
+      // Only send once every 15 minutes.
       final nowMs = DateTime.now().millisecondsSinceEpoch;
       final lastSentMs = prefs.getInt(_prefsLastSentMs) ?? 0;
 

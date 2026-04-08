@@ -198,63 +198,6 @@ class JourneyProvider extends ChangeNotifier {
   }
 
 
-  // void completeJourney({
-  //   required ll.LatLng endLocation,
-  //   required String endAddress,
-  //   double? distanceInMeters,
-  // }) {
-  //   if (_current == null) return;
-  //
-  //   _current = _current!.copyWith(
-  //     endLocation: endLocation,
-  //     endAddress: endAddress,
-  //     distanceInMeters: distanceInMeters,
-  //     endedAt: DateTime.now(),
-  //   );
-  //   notifyListeners();
-  // }
-  //
-  //
-  // Future<void> saveCurrentJourney() async {
-  //   if (_current == null) return;
-  //
-  //   _isSaving = true;
-  //   _error = null;
-  //   notifyListeners();
-  //
-  //   try {
-  //     final saved = await _repository.saveJourney(_current!);
-  //     _history.insert(0, saved);
-  //     _current = null;
-  //   } catch (e) {
-  //     _error = e.toString();
-  //     if (kDebugMode) {
-  //       print('Error saving journey: $e');
-  //     }
-  //   } finally {
-  //     _isSaving = false;
-  //     notifyListeners();
-  //   }
-  // }
-  //
-  //
-  // Future<void> loadHistory() async {
-  //   _isSaving = true;
-  //   _error = null;
-  //   notifyListeners();
-  //
-  //   try {
-  //     final journeys = await _repository.fetchJourneys();
-  //     _history = journeys;
-  //   } catch (e) {
-  //     _error = e.toString();
-  //   } finally {
-  //     _isSaving = false;
-  //     notifyListeners();
-  //   }
-  // }
-
-
   void clearError() {
     _error = null;
     notifyListeners();

@@ -51,7 +51,7 @@ class OdooUser {
   });
 
   factory OdooUser.fromJson(Map<String, dynamic> result) {
-    // result is the content of "result" from the JSON-RPC response
+
     final userCompanies =
         result['user_companies'] as Map<String, dynamic>? ?? {};
     final allowedCompanies =

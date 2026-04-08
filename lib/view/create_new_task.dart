@@ -9,7 +9,8 @@ class TaskProvider extends ChangeNotifier {
   String status = 'Ready';
 
   OdooSessionRpc _rpc(String cookie) => OdooSessionRpc(
-    baseUrl: "https://demo.kendroo.com",
+     baseUrl: "http://72.61.250.60:8069",
+    // baseUrl: "http://192.168.50.92:8017",
     sessionCookie: cookie,
   );
 
@@ -170,7 +171,7 @@ class TaskProvider extends ChangeNotifier {
     required int projectId,
     required int taskId,
     required String description,
-    required double hours,
+    required double? hours,
   }) async {
     savingTimesheet = true;
     notifyListeners();
@@ -302,6 +303,9 @@ class _NewTaskCreatePageState extends State<NewTaskCreatePage> {
       // final uid = auth.user?.uid;
       // if (uid != null) tp.fetchMyTimesheets(cookie: cookie, uid: uid);
     }
+
+    _hoursCtrl.addListener(() => setState(() {}));
+    _descCtrl.addListener(() => setState(() {}));
   }
 
   @override
@@ -404,9 +408,23 @@ class _NewTaskCreatePageState extends State<NewTaskCreatePage> {
     );
   }
 
+  double? _parseTimeToDouble(String value) {
+    if (value.isEmpty) return null;
 
+    // If user just typed a number like "9", handle it
+    if (!value.contains(':')) return double.tryParse(value);
+
+    final parts = value.split(':');
+    if (parts.length != 2) return null;
+
+    final hours = double.tryParse(parts[0]) ?? 0;
+    final minutes = double.tryParse(parts[1]) ?? 0;
+
+
+    return hours + (minutes / 60.0);
+  }
   bool get _canSubmit {
-    final hours = double.tryParse(_hoursCtrl.text.trim());
+    final hours = _parseTimeToDouble(_hoursCtrl.text.trim());
     return _selectedDateTime != null &&
         tp.selectedProjectId != null &&
         tp.selectedTaskId != null &&
@@ -429,7 +447,7 @@ class _NewTaskCreatePageState extends State<NewTaskCreatePage> {
         throw Exception("Auth missing (cookie/uid)");
       }
 
-      final hours = double.parse(_hoursCtrl.text.trim());
+      double? hours = _parseTimeToDouble(_hoursCtrl.text.trim());
       final desc = _descCtrl.text.trim();
 
       final newId = await tp.createTimesheet(

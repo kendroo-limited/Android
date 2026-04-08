@@ -6,7 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../model/employee_model.dart';
 import '../provider/auth_provider.dart';
 import '../provider/employee_provider.dart';
-
+import 'package:flutter_svg/flutter_svg.dart';
 // class EmployeeProfilePage extends StatefulWidget {
 //   const EmployeeProfilePage({super.key});
 //
@@ -528,6 +528,87 @@ import '../provider/employee_provider.dart';
 
 import 'package:flutter/foundation.dart';
 import '../repo/odoo_json_rpc.dart';
+import 'dart:convert';
+import 'dart:typed_data';
+import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+
+import 'dart:convert';
+import 'dart:typed_data';
+import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+
+class ImageHandler {
+  static Widget buildAvatar(dynamic data, double radius) {
+    if (data == null || data == false || data.toString().trim().isEmpty) {
+      return _placeholder(radius);
+    }
+
+    final String raw = data.toString().trim();
+
+    // Network image
+    if (raw.startsWith('http')) {
+      return Image.network(
+        raw,
+        fit: BoxFit.cover,
+        width: radius * 2,
+        height: radius * 2,
+        errorBuilder: (_, __, ___) => _placeholder(radius),
+      );
+    }
+
+    try {
+      final String clean = _cleanBase64(raw);
+      final Uint8List bytes = base64Decode(clean);
+
+      // Check SVG
+      final String text = utf8.decode(bytes, allowMalformed: true);
+      if (text.contains('<svg')) {
+        return SvgPicture.string(
+          text,
+          fit: BoxFit.cover,
+          width: radius * 2,
+          height: radius * 2,
+        );
+      }
+
+      // PNG/JPG/WEBP/other bitmap
+      return Image.memory(
+        bytes,
+        fit: BoxFit.cover,
+        width: radius * 2,
+        height: radius * 2,
+        errorBuilder: (_, __, ___) => _placeholder(radius),
+      );
+    } catch (e) {
+      debugPrint('ImageHandler error: $e');
+      return _placeholder(radius);
+    }
+  }
+
+  static String _cleanBase64(String value) {
+    String s = value.trim();
+
+    // remove prefix like rawImageData,xxxxx or data:image/png;base64,xxxxx
+    if (s.contains(',')) {
+      s = s.split(',').last;
+    }
+
+    // remove spaces/new lines
+    s = s.replaceAll(RegExp(r'\s+'), '');
+    return s;
+  }
+
+  static Widget _placeholder(double radius) {
+    return Center(
+      child: Icon(
+        Icons.person,
+        size: radius,
+        color: Colors.blue.shade300,
+      ),
+    );
+  }
+}
 class EmployeeProfileProvider extends ChangeNotifier {
   bool loading = false;
   String status = 'Ready';
@@ -535,7 +616,7 @@ class EmployeeProfileProvider extends ChangeNotifier {
 
   OdooSessionRpc _rpc(String cookie) {
     return OdooSessionRpc(
-      baseUrl: "https://demo.kendroo.com",
+      baseUrl: "http://72.61.250.60:8069",
       sessionCookie: cookie,
     );
   }
@@ -604,131 +685,6 @@ class EmployeeProfileProvider extends ChangeNotifier {
 
 }
 
-
-//
-// class MyProfilePage extends StatefulWidget {
-//   const MyProfilePage({super.key});
-//
-//   @override
-//   State<MyProfilePage> createState() => _MyProfilePageState();
-// }
-//
-// class _MyProfilePageState extends State<MyProfilePage> {
-//   @override
-//   void initState() {
-//     super.initState();
-//
-//     final auth = Provider.of<AuthProvider>(context, listen: false);
-//
-//     final cookie = auth.sessionCookie ?? '';
-//     final uid = auth.user?.uid;
-//
-//     if (cookie.isNotEmpty && uid != null) {
-//       Provider.of<EmployeeProfileProvider>(context, listen: false)
-//           .fetchMyProfile(cookie: cookie, uid: uid);
-//     }
-//   }
-//
-//   @override
-//   Widget build(BuildContext context) {
-//     final auth = Provider.of<AuthProvider>(context, listen: false);
-//
-//     return Scaffold(
-//       appBar: AppBar(title: const Text("My Profile"), centerTitle: true),
-//       body: Consumer<EmployeeProfileProvider>(
-//         builder: (context, p, _) {
-//           if (p.loading) return const Center(child: CircularProgressIndicator());
-//           if (p.profile.isEmpty) return Center(child: Text(p.status));
-//
-//           final prof = p.profile;
-//           final name = p.s(prof['name'], fallback: 'Unknown');
-//           final job = p.s(prof['job_title'], fallback: 'Job Position');
-//
-//           // avatar url (works with cookie)
-//           final uid = auth.user!.uid;
-//           final cookie = auth.sessionCookie ?? '';
-//
-//           final avatarUrl =
-//               "https://demo.kendroo.com/web/image?model=res.users&id=$uid&field=image_1920";
-//
-//           return ListView(
-//             padding: const EdgeInsets.all(16),
-//             children: [
-//               Row(
-//                 children: [
-//                   CircleAvatar(
-//                     radius: 34,
-//                     backgroundImage: NetworkImage(
-//                       avatarUrl,
-//                       headers: {"Cookie": cookie},
-//                     ),
-//                   ),
-//                   const SizedBox(width: 12),
-//                   Expanded(
-//                     child: Column(
-//                       crossAxisAlignment: CrossAxisAlignment.start,
-//                       children: [
-//                         Text(name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-//                         const SizedBox(height: 2),
-//                         Text(job, style: TextStyle(color: Colors.grey.shade700)),
-//                       ],
-//                     ),
-//                   ),
-//                 ],
-//               ),
-//
-//               const SizedBox(height: 20),
-//               const Text("Work Info", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-//               const Divider(),
-//
-//               _row("Work Mobile", p.s(prof['mobile_phone'])),
-//               _row("Work Phone", p.s(prof['work_phone'])),
-//               _row("Work Email", p.s(prof['work_email'])),
-//               _row("Work Location", p.m2oName(prof['work_location_id'])),
-//               _row("Manager", p.m2oName(prof['employee_parent_id'])),
-//               _row("Department", p.m2oName(prof['department_id'])),
-//               _row("Work Address", p.m2oName(prof['address_id'])),
-//
-//               const SizedBox(height: 18),
-//               const Text("Private Info", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-//               const Divider(),
-//
-//               _row("Private Street", p.s(prof['private_street'])),
-//               _row("Private City", p.s(prof['private_city'])),
-//               _row("Country", p.m2oName(prof['private_country_id'])),
-//               _row("Private Email", p.s(prof['private_email'])),
-//               _row("Private Phone", p.s(prof['private_phone'])),
-//
-//               const SizedBox(height: 18),
-//               const Text("Citizenship", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-//               const Divider(),
-//
-//               _row("Identification", p.s(prof['identification_id'])),
-//               _row("Passport", p.s(prof['passport_id'])),
-//               _row("Gender", p.s(prof['gender'])),
-//               _row("Date of Birth", p.s(prof['birthday'])),
-//             ],
-//           );
-//         },
-//       ),
-//     );
-//   }
-//
-//   Widget _row(String label, String value) {
-//     final v = (value.trim().isNotEmpty && value != '-' && value != 'false') ? value : 'N/A';
-//     return Padding(
-//       padding: const EdgeInsets.symmetric(vertical: 8),
-//       child: Row(
-//         children: [
-//           SizedBox(width: 140, child: Text(label, style: const TextStyle(color: Colors.black54))),
-//           Expanded(child: Text(v, style: const TextStyle(fontWeight: FontWeight.w600))),
-//         ],
-//       ),
-//     );
-//   }
-// }
-
-
 class MyProfilePage extends StatefulWidget {
   const MyProfilePage({super.key});
 
@@ -768,15 +724,64 @@ class _MyProfilePageState extends State<MyProfilePage> {
     });
   }
 
-  Uint8List? base64ToImage(dynamic base64String) {
-    if (base64String == null || base64String == false) return null;
+  // Uint8List? base64ToImage(dynamic base64String) {
+  //   if (base64String == null || base64String == false) return null;
+  //   try {
+  //     return base64Decode(base64String);
+  //   } catch (_) {
+  //     return null;
+  //   }
+  // }
+
+// Change the return type to dynamic so we can return the String for SVGs
+// or Uint8List for PNG/JPG
+  dynamic base64ToImage(dynamic base64String) {
+    if (base64String == null || base64String is! String || base64String.isEmpty) {
+      return null;
+    }
+
     try {
-      return base64Decode(base64String);
-    } catch (_) {
+      String cleanString = base64String.contains(',')
+          ? base64String.split(',').last
+          : base64String;
+      cleanString = cleanString.replaceAll(RegExp(r'\s+'), '');
+
+      // Decode the bytes
+      Uint8List bytes = base64Decode(cleanString);
+      String decodedString = utf8.decode(bytes, allowMalformed: true);
+
+      // Check if it's an SVG
+      if (decodedString.contains('<svg')) {
+        return decodedString; // Return the SVG XML string
+      }
+
+      return bytes; // Return raw bytes for PNG/JPG
+    } catch (e) {
       return null;
     }
   }
 
+  // Uint8List? base64ToImage(dynamic base64String) {
+  //   // 1. Check if the value is actually a string (Odoo often returns 'false' as a bool)
+  //   if (base64String == null || base64String is! String || base64String.isEmpty) {
+  //     return null;
+  //   }
+  //
+  //   try {
+  //     // 2. Remove the "data:image/png;base64," prefix if it exists
+  //     String cleanString = base64String.contains(',')
+  //         ? base64String.split(',').last
+  //         : base64String;
+  //
+  //     // 3. Remove any whitespace or newlines that might be in the string
+  //     cleanString = cleanString.replaceAll(RegExp(r'\s+'), '');
+  //
+  //     return base64Decode(cleanString);
+  //   } catch (e) {
+  //     print("Base64 Decoding Error: $e");
+  //     return null;
+  //   }
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -794,17 +799,17 @@ class _MyProfilePageState extends State<MyProfilePage> {
 
     return Scaffold(
       appBar: AppBar(title: const Text("My Profile"), centerTitle: true,
-      actions: [
-          ElevatedButton(
-          onPressed: () async {
-    await Provider.of<AuthProvider>(context, listen: false)
-        .logout(context);
-    },
-      child: const Image(
-        image: AssetImage('assets/icon/logout.png'),
-      ),
-    ),
-        ],
+    //   actions: [
+    //       ElevatedButton(
+    //       onPressed: () async {
+    // await Provider.of<AuthProvider>(context, listen: false)
+    //     .logout(context);
+    // },
+    //   child: const Image(
+    //     image: AssetImage('assets/icon/logout.png'),
+    //   ),
+    // ),
+    //     ],
       ),
       body: SafeArea(
         child: Consumer<EmployeeProfileProvider>(
@@ -816,14 +821,11 @@ class _MyProfilePageState extends State<MyProfilePage> {
             final name = p.s(prof['name'], fallback: 'Unknown');
             final job = p.s(prof['job_title'], fallback: 'Job Position');
 
-        //    final uid = auth.user!.uid;
-        //    final cookie = auth.sessionCookie ?? '';
-         //   final avatarUrl = "https://demo.kendroo.com/web/image?model=res.users&id=$uid&field=image_1920";
-            final imageBytes = base64ToImage(prof['avatar_128'] ?? prof['image_1920']);
+            final rawImageData = prof['avatar_128'] ?? prof['image_1920'];
+print("rawImageData,$rawImageData");
             return ListView(
               padding: EdgeInsets.all(padding),
               children: [
-                // Header
                 Container(
                   padding: EdgeInsets.all(padding),
                   decoration: BoxDecoration(
@@ -833,22 +835,20 @@ class _MyProfilePageState extends State<MyProfilePage> {
                   ),
                   child: Row(
                     children: [
-                      // CircleAvatar(
-                      //   radius: avatarRadius,
-                      //   backgroundColor: Colors.blue.shade100,
-                      //   backgroundImage: NetworkImage(
-                      //     avatarUrl,
-                      //     headers: {"Cookie": cookie},
-                      //   ),
-                      // ),
-                      CircleAvatar(
-                        radius: avatarRadius,
-                        backgroundColor: Colors.blue.shade100,
-                        backgroundImage: imageBytes != null ? MemoryImage(imageBytes) : null,
-                        child: imageBytes == null
-                            ? Icon(Icons.person, size: avatarRadius + 4, color: Colors.blue)
-                            : null,
+                    CircleAvatar(
+                    radius: avatarRadius,
+                    backgroundColor: Colors.blue.shade50,
+                    child: ClipOval(
+                      child: SizedBox(
+                        width: avatarRadius * 2,
+                        height: avatarRadius * 2,
+                        child: ImageHandler.buildAvatar(
+                          prof['image_1920'] ?? prof['avatar_128'],
+                          avatarRadius,
+                        ),
                       ),
+                    ),
+                  ),
                       SizedBox(width: isSmall ? 10 : 12),
                       Expanded(
                         child: Column(
